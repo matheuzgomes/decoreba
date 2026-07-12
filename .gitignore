@@ -1,0 +1,5 @@
+/decoreba
+/decoreba_min
+decoreba.exe
+*.tmp
+.DS_Store
