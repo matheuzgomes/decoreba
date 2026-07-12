@@ -23,7 +23,7 @@ type Store struct {
 	Commands []Command `json:"commands"`
 }
 
-func genID() string {
+func GenID() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)

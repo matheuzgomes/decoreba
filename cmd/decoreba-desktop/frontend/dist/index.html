@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>*{margin:0;padding:0;box-sizing:border-box}</style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="search-input" placeholder="Search command..." spellcheck="false" autocomplete="off">
+    <span id="context-badge" class="badge">all</span>
+  </header>
+  <main id="results"></main>
+  <div id="create-form" class="hidden">
+    <input type="text" id="create-context" placeholder="Context" spellcheck="false">
+    <input type="text" id="create-title" placeholder="Description" spellcheck="false">
+    <input type="text" id="create-command" placeholder="Command" spellcheck="false" style="font-family:var(--font-mono)">
+  </div>
+  <footer id="footer">
+    <span id="footer-hints"></span>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -17,7 +17,7 @@ func isWSL() bool {
 		bytes.Contains(bytes.ToLower(data), []byte("wsl"))
 }
 
-func copyToClipboard(text string) error {
+func CopyToClipboard(text string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":

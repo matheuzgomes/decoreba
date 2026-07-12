@@ -7,6 +7,18 @@ import (
 	"path/filepath"
 )
 
+func ConfigPath() (string, error) {
+	path, err := configPath()
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func StatPath(path string) (os.FileInfo, error) {
+	return os.Stat(path)
+}
+
 func configPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {

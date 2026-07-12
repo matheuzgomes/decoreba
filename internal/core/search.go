@@ -38,7 +38,7 @@ func fuzzyScore(query, target string) int {
 	return score
 }
 
-func matchesCommand(query string, c Command) (int, bool) {
+func MatchesCommand(query string, c Command) (int, bool) {
 	if query == "" {
 		return 0, true
 	}
@@ -109,7 +109,7 @@ func runSearch(context, query string) {
 	}
 	var results []scored
 	for _, c := range pool {
-		if score, ok := matchesCommand(query, c); ok {
+		if score, ok := MatchesCommand(query, c); ok {
 			results = append(results, scored{c, score})
 		}
 	}
@@ -134,7 +134,7 @@ func runSearch(context, query string) {
 	if err != nil || chosen == nil {
 		return
 	}
-	if err := copyToClipboard(chosen.Command); err != nil {
+	if err := CopyToClipboard(chosen.Command); err != nil {
 		fmt.Printf("Could not copy automatically (%v).\nCommand: %s\n", err, chosen.Command)
 	} else {
 		fmt.Printf("✓ Copied: %s\n", chosen.Command)

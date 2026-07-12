@@ -6,7 +6,7 @@ func seedCommands() []Command {
 	now := time.Now()
 	mk := func(ctx, title, command string, tags ...string) Command {
 		return Command{
-			ID:        genID(),
+			ID:        GenID(),
 			Context:   ctx,
 			Title:     title,
 			Command:   command,

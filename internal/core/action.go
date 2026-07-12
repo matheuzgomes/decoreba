@@ -59,7 +59,7 @@ func cmdAdd() {
 
 	now := time.Now()
 	cmd := Command{
-		ID:        genID(),
+		ID:        GenID(),
 		Context:   strings.ToLower(context),
 		Title:     title,
 		Command:   command,
