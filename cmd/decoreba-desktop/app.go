@@ -1,16 +1,21 @@
 package main
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"time"
 
 	"decoreba/internal/core"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
-	store *core.Store
-	mtime time.Time
+	store    *core.Store
+	mtime    time.Time
+	settings core.Settings
+	ctx      context.Context
 }
 
 func NewApp() *App {
@@ -18,7 +23,11 @@ func NewApp() *App {
 	if err != nil {
 		s = &core.Store{Version: 1}
 	}
-	a := &App{store: s}
+	settings, err := core.LoadSettings()
+	if err != nil {
+		settings = core.DefaultSettings()
+	}
+	a := &App{store: s, settings: settings}
 	a.recordMtime()
 	return a
 }
@@ -138,5 +147,49 @@ func (a *App) CopyCommand(id string) error {
 			return core.Save(a.store)
 		}
 	}
+	return nil
+}
+
+func (a *App) DeleteCommand(id string) error {
+	for i := range a.store.Commands {
+		if a.store.Commands[i].ID == id {
+			a.store.Commands = append(a.store.Commands[:i], a.store.Commands[i+1:]...)
+			return core.Save(a.store)
+		}
+	}
+	return nil
+}
+
+func (a *App) SetContext(ctx context.Context) {
+	a.ctx = ctx
+}
+
+func (a *App) GetSettings() core.Settings {
+	return a.settings
+}
+
+func (a *App) SaveSettings(s core.Settings) error {
+	if s.Width < 400 {
+		s.Width = 400
+	}
+	if s.Height < 280 {
+		s.Height = 280
+	}
+	if s.FontScale < 0.6 {
+		s.FontScale = 0.6
+	}
+	if s.FontScale > 2.0 {
+		s.FontScale = 2.0
+	}
+
+	if a.ctx != nil {
+		runtime.WindowSetSize(a.ctx, s.Width, s.Height)
+		runtime.WindowSetAlwaysOnTop(a.ctx, s.AlwaysOnTop)
+	}
+
+	if err := core.SaveSettings(s); err != nil {
+		return err
+	}
+	a.settings = s
 	return nil
 }

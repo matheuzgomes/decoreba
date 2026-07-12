@@ -48,6 +48,24 @@ export namespace core {
 		    return a;
 		}
 	}
+	export class Settings {
+	    width: number;
+	    height: number;
+	    font_scale: number;
+	    always_on_top: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.width = source["width"];
+	        this.height = source["height"];
+	        this.font_scale = source["font_scale"];
+	        this.always_on_top = source["always_on_top"];
+	    }
+	}
 
 }
 

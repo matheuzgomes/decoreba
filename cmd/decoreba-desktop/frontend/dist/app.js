@@ -5,6 +5,7 @@ let currentContext = ''
 let mode = 'search' // 'search' | 'create'
 let searchTimer = null
 let contextCycleIndex = -1
+let confirmDelete = -1
 
 const searchInput = document.getElementById('search-input')
 const resultsEl = document.getElementById('results')
@@ -14,6 +15,18 @@ const footerHints = document.getElementById('footer-hints')
 const createCtx = document.getElementById('create-context')
 const createTitle = document.getElementById('create-title')
 const createCmd = document.getElementById('create-command')
+
+const settingsBtn = document.getElementById('settings-btn')
+const settingsPanel = document.getElementById('settings-panel')
+const setWidth = document.getElementById('set-width')
+const setWidthVal = document.getElementById('set-width-val')
+const setHeight = document.getElementById('set-height')
+const setHeightVal = document.getElementById('set-height-val')
+const setFontScale = document.getElementById('set-font-scale')
+const setFontScaleVal = document.getElementById('set-font-scale-val')
+const setOnTop = document.getElementById('set-on-top')
+const settingsSave = document.getElementById('settings-save')
+const hideBtn = document.getElementById('hide-btn')
 
 let backend = null
 
@@ -70,15 +83,25 @@ function renderSearch() {
   for (let i = 0; i < results.length; i++) {
     const r = results[i]
     const sel = i === selectedIndex ? ' selected' : ''
+    const del = i === confirmDelete ? ' confirm-delete' : ''
     const icon = getContextIcon(r.cmd.context)
+
+    let rightBlock
+    if (i === confirmDelete) {
+      rightBlock = '<span class="confirm-hint">Enter: confirm · Esc: cancel</span>'
+    } else {
+      rightBlock = '<span class="context-tag">' + esc(r.cmd.context) + '</span>'
+    }
+
     html +=
-      '<div class="result-item' + sel + '" data-idx="' + i + '">' +
+      '<div class="result-item' + sel + del + '" data-idx="' + i + '">' +
       '  <span class="context-icon">' + icon + '</span>' +
       '  <span class="text-block">' +
       '    <div class="title">' + esc(r.cmd.title) + '</div>' +
       '    <div class="command-line">' + esc(r.cmd.command) + '</div>' +
       '  </span>' +
-      '  <span class="context-tag">' + esc(r.cmd.context) + '</span>' +
+      '  ' + rightBlock +
+      '  <button class="delete-btn" title="Delete command">&times;</button>' +
       '</div>'
   }
   resultsEl.innerHTML = html
@@ -87,8 +110,18 @@ function renderSearch() {
   items.forEach((el) => {
     el.onclick = () => {
       const idx = parseInt(el.dataset.idx, 10)
+      if (confirmDelete >= 0) return
       selectedIndex = idx
       copySelected()
+    }
+    const delBtn = el.querySelector('.delete-btn')
+    if (delBtn) {
+      delBtn.onclick = (ev) => {
+        ev.stopPropagation()
+        confirmDelete = parseInt(el.dataset.idx, 10)
+        renderSearch()
+        searchInput.focus()
+      }
     }
   })
 
@@ -96,7 +129,7 @@ function renderSearch() {
     items[selectedIndex].scrollIntoView({ block: 'nearest' })
   }
 
-  setFooter(getContextsText() + ' · enter copy · tab context · ctrl+enter new')
+  setFooter(getContextsText() + ' · enter copy · tab context · ctrl+enter new · ctrl+backspace delete')
 }
 
 function getContextsText() {
@@ -132,6 +165,7 @@ async function doSearch() {
   const ctx = currentContext === 'all' ? '' : currentContext
   try {
     const r = await call('Search', query, ctx)
+    if (mode === 'create') return
     results = r || []
     selectedIndex = 0
     renderSearch()
@@ -186,6 +220,30 @@ function showCopiedFeedback(idx) {
   }, 800)
 }
 
+function deleteSelected() {
+  if (!results || results.length === 0 || selectedIndex < 0) return
+  confirmDelete = selectedIndex
+  renderSearch()
+  searchInput.focus()
+}
+
+async function confirmDeleteSelected() {
+  if (confirmDelete < 0 || confirmDelete >= results.length) return
+  const id = results[confirmDelete].cmd.id
+  try {
+    await call('DeleteCommand', id)
+  } catch (e) {
+    console.error('delete error', e)
+  }
+  confirmDelete = -1
+  doSearch()
+}
+
+function cancelDelete() {
+  confirmDelete = -1
+  renderSearch()
+}
+
 async function saveNewCommand() {
   const ctx = createCtx.value.trim()
   const title = createTitle.value.trim()
@@ -201,7 +259,85 @@ async function saveNewCommand() {
   }
 }
 
+async function openSettings() {
+  mode = 'settings'
+  resultsEl.style.display = 'none'
+  createForm.classList.add('hidden')
+  settingsPanel.classList.remove('hidden')
+
+  let s = { width: 560, height: 440, font_scale: 1, always_on_top: true }
+  try {
+    s = await call('GetSettings') || s
+  } catch (e) {}
+
+  setWidth.value = s.width
+  setWidthVal.textContent = s.width + 'px'
+  setHeight.value = s.height
+  setHeightVal.textContent = s.height + 'px'
+  setFontScale.value = s.font_scale
+  setFontScaleVal.textContent = s.font_scale.toFixed(1) + 'x'
+  setOnTop.checked = s.always_on_top
+
+  setFooter('settings')
+}
+
+function closeSettings() {
+  settingsPanel.classList.add('hidden')
+  switchMode('search')
+}
+
+async function saveSettings() {
+  const s = {
+    width: parseInt(setWidth.value, 10),
+    height: parseInt(setHeight.value, 10),
+    font_scale: parseFloat(setFontScale.value),
+    always_on_top: setOnTop.checked,
+  }
+  try {
+    await call('SaveSettings', s)
+  } catch (e) {
+    console.error('save settings error', e)
+  }
+  document.documentElement.style.setProperty('--font-scale', s.font_scale)
+  closeSettings()
+}
+
+setWidth.addEventListener('input', () => {
+  setWidthVal.textContent = setWidth.value + 'px'
+})
+
+setHeight.addEventListener('input', () => {
+  setHeightVal.textContent = setHeight.value + 'px'
+})
+
+setFontScale.addEventListener('input', () => {
+  setFontScaleVal.textContent = parseFloat(setFontScale.value).toFixed(1) + 'x'
+  document.documentElement.style.setProperty('--font-scale', setFontScale.value)
+})
+
+settingsBtn.addEventListener('click', () => openSettings())
+settingsSave.addEventListener('click', () => saveSettings())
+
+hideBtn.addEventListener('click', () => {
+  try {
+    window.runtime && window.runtime.WindowHide && window.runtime.WindowHide()
+  } catch (_) {}
+})
+
+settingsPanel.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSettings() }
+  if (e.key === 'Enter') { e.preventDefault(); saveSettings() }
+})
+
 function esc() {
+  if (confirmDelete >= 0) {
+    cancelDelete()
+    return
+  }
+  if (mode === 'settings') {
+    closeSettings()
+    return
+  }
   if (mode === 'create') {
     switchMode('search')
     return
@@ -212,7 +348,7 @@ function esc() {
     return
   }
   try {
-    window.runtime && window.runtime.Window && window.runtime.Window.Hide()
+    window.runtime && window.runtime.WindowHide && window.runtime.WindowHide()
   } catch (_) {}
 }
 
@@ -239,7 +375,40 @@ function esc(s) {
 }
 
 searchInput.addEventListener('keydown', (e) => {
-  if (mode === 'create') return
+  if (mode === 'create') {
+    if (e.key === 'Escape') { e.preventDefault(); esc(); return }
+    return
+  }
+
+  if (confirmDelete >= 0) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      confirmDeleteSelected()
+      return
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelDelete()
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (confirmDelete < results.length - 1) confirmDelete++
+      else confirmDelete = 0
+      renderSearch()
+      searchInput.focus()
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (confirmDelete > 0) confirmDelete--
+      else confirmDelete = results.length - 1
+      renderSearch()
+      searchInput.focus()
+      return
+    }
+    return
+  }
 
   if (e.key === 'ArrowDown') {
     e.preventDefault()
@@ -277,6 +446,14 @@ searchInput.addEventListener('keydown', (e) => {
     return
   }
 
+  if (e.key === 'Backspace' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault()
+    if (results.length > 0 && selectedIndex >= 0) {
+      deleteSelected()
+    }
+    return
+  }
+
   if (e.key === 'Escape') {
     e.preventDefault()
     esc()
@@ -291,17 +468,17 @@ searchInput.addEventListener('input', () => {
 
 createCtx.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); createTitle.focus() }
-  if (e.key === 'Escape') { e.preventDefault(); esc() }
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); esc() }
 })
 
 createTitle.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); createCmd.focus() }
-  if (e.key === 'Escape') { e.preventDefault(); esc() }
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); esc() }
 })
 
 createCmd.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); saveNewCommand() }
-  if (e.key === 'Escape') { e.preventDefault(); esc() }
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); esc() }
 })
 
 async function init() {
@@ -311,6 +488,14 @@ async function init() {
   await doSearch()
   searchInput.focus()
 }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return
+  if (mode === 'create' || mode === 'settings' || confirmDelete >= 0) {
+    e.preventDefault()
+    esc()
+  }
+})
 
 document.addEventListener('DOMContentLoaded', () => {
   if (getBackend()) {

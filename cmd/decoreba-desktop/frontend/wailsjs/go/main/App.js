@@ -10,6 +10,10 @@ export function CopyCommand(arg1) {
   return window['go']['main']['App']['CopyCommand'](arg1);
 }
 
+export function DeleteCommand(arg1) {
+  return window['go']['main']['App']['DeleteCommand'](arg1);
+}
+
 export function GetCommands() {
   return window['go']['main']['App']['GetCommands']();
 }
@@ -18,10 +22,22 @@ export function GetContexts() {
   return window['go']['main']['App']['GetContexts']();
 }
 
+export function GetSettings() {
+  return window['go']['main']['App']['GetSettings']();
+}
+
 export function Refresh() {
   return window['go']['main']['App']['Refresh']();
 }
 
+export function SaveSettings(arg1) {
+  return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
 export function Search(arg1, arg2) {
   return window['go']['main']['App']['Search'](arg1, arg2);
+}
+
+export function SetContext(arg1) {
+  return window['go']['main']['App']['SetContext'](arg1);
 }

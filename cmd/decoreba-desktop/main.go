@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -53,12 +54,14 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:            "decoreba",
-		Width:            560,
-		Height:           440,
-		MinWidth:         560,
-		MaxWidth:         560,
+		Width:            app.settings.Width,
+		Height:           app.settings.Height,
+		MinWidth:         400,
+		MinHeight:        280,
+		MaxWidth:         1200,
+		MaxHeight:        800,
 		Frameless:        true,
-		AlwaysOnTop:      true,
+		AlwaysOnTop:      app.settings.AlwaysOnTop,
 		StartHidden:      startHidden,
 		HideWindowOnClose: true,
 
@@ -83,6 +86,11 @@ func main() {
 		Linux: &linux.Options{},
 
 		OnStartup: func(ctx context.Context) {
+			app.SetContext(ctx)
+
+			runtime.WindowExecJS(ctx,
+				fmt.Sprintf("document.documentElement.style.setProperty('--font-scale','%g')", app.settings.FontScale))
+
 			if trayAvailable {
 				t, err := tray.New(showCh, quitCh)
 				if err != nil {

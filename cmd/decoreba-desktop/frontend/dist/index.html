@@ -12,12 +12,48 @@
     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input type="text" id="search-input" placeholder="Search command..." spellcheck="false" autocomplete="off">
     <span id="context-badge" class="badge">all</span>
+    <button id="settings-btn" title="Settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1.08 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1.08z"/></svg>
+    </button>
+    <button id="hide-btn" title="Hide window">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </header>
   <main id="results"></main>
   <div id="create-form" class="hidden">
     <input type="text" id="create-context" placeholder="Context" spellcheck="false">
     <input type="text" id="create-title" placeholder="Description" spellcheck="false">
     <input type="text" id="create-command" placeholder="Command" spellcheck="false" style="font-family:var(--font-mono)">
+  </div>
+  <div id="settings-panel" class="hidden">
+    <div class="settings-section">
+      <label class="settings-label">Window width</label>
+      <div class="settings-row">
+        <input type="range" id="set-width" min="400" max="1200" value="560">
+        <span id="set-width-val" class="settings-val">560px</span>
+      </div>
+    </div>
+    <div class="settings-section">
+      <label class="settings-label">Window height</label>
+      <div class="settings-row">
+        <input type="range" id="set-height" min="280" max="800" value="440">
+        <span id="set-height-val" class="settings-val">440px</span>
+      </div>
+    </div>
+    <div class="settings-section">
+      <label class="settings-label">Font scale</label>
+      <div class="settings-row">
+        <input type="range" id="set-font-scale" min="0.6" max="2" step="0.1" value="1">
+        <span id="set-font-scale-val" class="settings-val">1.0x</span>
+      </div>
+    </div>
+    <div class="settings-section settings-toggle">
+      <label class="settings-label" for="set-on-top">Always on top</label>
+      <input type="checkbox" id="set-on-top" checked>
+    </div>
+    <div class="settings-actions">
+      <button id="settings-save" class="btn-primary">Save</button>
+    </div>
   </div>
   <footer id="footer">
     <span id="footer-hints"></span>
