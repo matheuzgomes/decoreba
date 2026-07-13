@@ -7,6 +7,8 @@ package hotkey
 
 extern void goHotkeyCallback();
 
+static EventHotKeyRef hotKeyRef = NULL;
+
 static OSStatus hotkeyHandler(EventHandlerCallRef ref, EventRef event, void *data) {
 	goHotkeyCallback();
 	return noErr;
@@ -26,15 +28,15 @@ static int registerHotkey(unsigned int keycode, unsigned int modifiers) {
 	hkID.signature = 'deco';
 	hkID.id = 1;
 
-	err = RegisterEventHotKey(keycode, modifiers, hkID, target, 0, NULL);
+	err = RegisterEventHotKey(keycode, modifiers, hkID, target, 0, &hotKeyRef);
 	return err == noErr ? 1 : 0;
 }
 
-static void unregisterHotkey(unsigned int keycode, unsigned int modifiers) {
-	EventHotKeyID hkID;
-	hkID.signature = 'deco';
-	hkID.id = 1;
-	UnregisterEventHotKey(hkID);
+static void unregisterHotkey() {
+	if (hotKeyRef != NULL) {
+		UnregisterEventHotKey(hotKeyRef);
+		hotKeyRef = NULL;
+	}
 }
 */
 import "C"
@@ -120,7 +122,7 @@ func newPlatform(showCh chan<- bool, key string) (*Manager, error) {
 
 	return &Manager{closeFn: func() {
 		close(cancel)
-		C.unregisterHotkey(C.uint(kv), mods)
+		C.unregisterHotkey()
 	}}, nil
 }
 

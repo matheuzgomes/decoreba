@@ -40,7 +40,6 @@ void trayCleanup() {
 */
 import "C"
 import (
-	"fmt"
 	"runtime"
 )
 
