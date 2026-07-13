@@ -32,7 +32,7 @@ static HWND createTrayWindow(HINSTANCE hInstance) {
 	return CreateWindowEx(0, "DecorebaTrayClass", "", 0, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
 }
 
-static int addTrayIcon(HWND hwnd) {
+static int addTrayIcon(HWND hwnd, HINSTANCE hInst) {
 	NOTIFYICONDATA nid;
 	memset(&nid, 0, sizeof(nid));
 	nid.cbSize = sizeof(nid);
@@ -40,7 +40,8 @@ static int addTrayIcon(HWND hwnd) {
 	nid.uID = ID_TRAY_ICON;
 	nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
 	nid.uCallbackMessage = WM_TRAY_CALLBACK;
-	nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	nid.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(1));
+	if (!nid.hIcon) nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	strncpy(nid.szTip, "decoreba", sizeof(nid.szTip));
 	return Shell_NotifyIcon(NIM_ADD, &nid);
 }
@@ -91,7 +92,7 @@ func newPlatform(showCh chan<- bool, quitCh chan<- struct{}) (*Tray, error) {
 			return
 		}
 
-		if C.addTrayIcon(hwnd) == 0 {
+		if C.addTrayIcon(hwnd, hInstance) == 0 {
 			log.Printf("tray: Shell_NotifyIcon(NIM_ADD) failed")
 			C.DestroyWindow(hwnd)
 			return

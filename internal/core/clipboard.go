@@ -14,6 +14,7 @@ func CopyToClipboard(text string) error {
 		cmd = exec.Command("pbcopy")
 	case "windows":
 		cmd = exec.Command("clip")
+		hideWindow(cmd)
 	default:
 		if IsWSL() {
 			if path, err := exec.LookPath("clip.exe"); err == nil {

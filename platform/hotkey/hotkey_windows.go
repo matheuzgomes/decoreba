@@ -47,24 +47,27 @@ func newPlatform(showCh chan<- bool, key string) (*Manager, error) {
 		return nil, fmt.Errorf("unknown key: %q (valid: %s)", key, KnownKeys())
 	}
 
-	mods := uintptr(C.MOD_ALT | C.MOD_SHIFT | C.MOD_NOREPEAT)
-	kid := int32(1)
-
-	ret := C.RegisterHotKey(nil, C.int(kid), C.uint(mods), C.uint(vk))
-	if ret == 0 {
-		return nil, fmt.Errorf("RegisterHotKey failed (key may be in use)")
-	}
-
-	log.Printf("hotkey: registered Alt+Shift+%s (id=%d)", key, kid)
-
 	cancel := make(chan struct{})
 
 	go func() {
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
+
+		mods := uintptr(C.MOD_ALT | C.MOD_SHIFT | C.MOD_NOREPEAT)
+		kid := int32(1)
+
+		ret := C.RegisterHotKey(nil, C.int(kid), C.uint(mods), C.uint(vk))
+		if ret == 0 {
+			log.Printf("hotkey: RegisterHotKey failed (key may be in use)")
+			return
+		}
+
+		log.Printf("hotkey: registered Alt+Shift+%s (id=%d)", key, kid)
+
 		for {
 			select {
 			case <-cancel:
+				C.UnregisterHotKey(nil, C.int(kid))
 				return
 			default:
 			}
@@ -85,6 +88,5 @@ func newPlatform(showCh chan<- bool, key string) (*Manager, error) {
 
 	return &Manager{closeFn: func() {
 		close(cancel)
-		C.UnregisterHotKey(nil, C.int(kid))
 	}}, nil
 }
