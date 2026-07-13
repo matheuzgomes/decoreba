@@ -72,9 +72,6 @@ jobs:
           GOARCH="${{ matrix.goarch }}"
           if [ "$GOOS" = "windows" ]; then
             mv cmd/decoreba-desktop/build/bin/decoreba-desktop.exe "decoreba-desktop-${GOOS}-${GOARCH}.exe"
-          elif [ "$GOOS" = "darwin" ]; then
-            cd cmd/decoreba-desktop/build/bin
-            zip -r "../../../decoreba-desktop-${GOOS}-${GOARCH}.zip" decoreba-desktop.app
           else
             mv cmd/decoreba-desktop/build/bin/decoreba-desktop "decoreba-desktop-${GOOS}-${GOARCH}"
           fi
