@@ -10,8 +10,8 @@ import (
 
 	"decoreba/internal/core"
 
-	"decoreba/cmd/decoreba-desktop/hotkey"
-	"decoreba/cmd/decoreba-desktop/tray"
+	"decoreba/platform/hotkey"
+	"decoreba/platform/tray"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -25,10 +25,6 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-func isWSL() bool {
-	return os.Getenv("WSL_DISTRO_NAME") != "" || os.Getenv("WSLENV") != ""
-}
-
 func main() {
 	hotkeyKey := flag.String("hotkey", "space", "hotkey key name (space, d, tab, slash, etc.)")
 	flag.Parse()
@@ -41,7 +37,7 @@ func main() {
 	trayAvailable := tray.Available()
 	startHidden := trayAvailable
 
-	if isWSL() {
+	if core.IsWSL() {
 		if !trayAvailable {
 			log.Printf("main: WSL detected, no tray available — window will start visible.")
 			log.Printf("main: hotkey Alt+Shift+%s may conflict with Windows host shortcuts.", *hotkeyKey)

@@ -1,11 +1,12 @@
 BINARY=decoreba
-DESKTOP_BIN=cmd/decoreba-desktop/build/bin/decoreba-desktop
+DESKTOP_DIR=cmd/decoreba-desktop
+DESKTOP_BIN=$(DESKTOP_DIR)/build/bin/decoreba-desktop
 
 build:
 	go build -ldflags "-s -w" -o $(BINARY) ./cmd/decoreba
 
 build-wails:
-	cd cmd/decoreba-desktop && wails build
+	cd $(DESKTOP_DIR) && wails build
 
 install:
 	go install ./cmd/decoreba

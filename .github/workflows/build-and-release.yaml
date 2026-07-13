@@ -1,0 +1,107 @@
+name: Build and Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: linux,   goarch: amd64 }
+          - { goos: linux,   goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+          - { goos: darwin,  goarch: amd64 }
+          - { goos: darwin,  goarch: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Build CLI
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          name="decoreba-$GOOS-$GOARCH"
+          if [ "$GOOS" = "windows" ]; then name="$name.exe"; fi
+          go build -ldflags="-s -w" -o "$name" ./cmd/decoreba
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: decoreba-*
+
+  desktop:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest,  goos: linux,   goarch: amd64 }
+          - { os: windows-latest, goos: windows, goarch: amd64 }
+          - { os: macos-latest,   goos: darwin,  goarch: amd64 }
+          - { os: macos-14,       goos: darwin,  goarch: arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libx11-dev
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
+
+      - name: Build Desktop
+        working-directory: cmd/decoreba-desktop
+        run: $(go env GOPATH)/bin/wails build -platform ${{ matrix.goos }}/${{ matrix.goarch }}
+
+      - name: Rename binary
+        shell: bash
+        run: |
+          GOOS="${{ matrix.goos }}"
+          GOARCH="${{ matrix.goarch }}"
+          if [ "$GOOS" = "windows" ]; then
+            mv cmd/decoreba-desktop/build/bin/decoreba-desktop.exe "decoreba-desktop-${GOOS}-${GOARCH}.exe"
+          elif [ "$GOOS" = "darwin" ]; then
+            cd cmd/decoreba-desktop/build/bin
+            zip -r "../../../decoreba-desktop-${GOOS}-${GOARCH}.zip" decoreba-desktop.app
+          else
+            mv cmd/decoreba-desktop/build/bin/decoreba-desktop "decoreba-desktop-${GOOS}-${GOARCH}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: decoreba-desktop-*
+
+  release:
+    needs: [cli, desktop]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          find dist -type f -name 'decoreba-*' -exec cp {} release/ \;
+          cd release && sha256sum * > checksums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true

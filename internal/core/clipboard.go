@@ -3,19 +3,9 @@ package core
 import (
 	"bytes"
 	"errors"
-	"os"
 	"os/exec"
 	"runtime"
 )
-
-func isWSL() bool {
-	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
-	if err != nil {
-		return false
-	}
-	return bytes.Contains(bytes.ToLower(data), []byte("microsoft")) ||
-		bytes.Contains(bytes.ToLower(data), []byte("wsl"))
-}
 
 func CopyToClipboard(text string) error {
 	var cmd *exec.Cmd
@@ -25,7 +15,7 @@ func CopyToClipboard(text string) error {
 	case "windows":
 		cmd = exec.Command("clip")
 	default:
-		if isWSL() {
+		if IsWSL() {
 			if path, err := exec.LookPath("clip.exe"); err == nil {
 				cmd = exec.Command(path)
 			}
