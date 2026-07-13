@@ -46,9 +46,8 @@ func newPlatform(showCh chan<- bool, quitCh chan<- struct{}) (*Tray, error) {
 	nid.uCallbackMessage = C.WM_TRAY_CALLBACK
 	nid.hIcon = icon
 
-	tip := C.CString("decoreba")
-	defer C.free(unsafe.Pointer(tip))
-	for i := 0; i < len("decoreba") && i < 127; i++ {
+	tip := "decoreba"
+	for i := 0; i < len(tip) && i < 128; i++ {
 		nid.szTip[i] = C.CHAR(tip[i])
 	}
 
