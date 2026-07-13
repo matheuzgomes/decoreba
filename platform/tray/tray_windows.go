@@ -1,7 +1,7 @@
 package tray
 
 /*
-#cgo LDFLAGS: -luser32 -lshell32
+#cgo LDFLAGS: -luser32 -lshell32 -lgdi32
 #include <windows.h>
 #include <shellapi.h>
 #include <stdlib.h>
