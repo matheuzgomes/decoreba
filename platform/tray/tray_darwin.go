@@ -11,7 +11,7 @@ extern void trayQuitC();
 
 static void* statusItem = NULL;
 
-void trayInit() {
+static void trayInit() {
 	id cls = (id)objc_getClass("NSStatusBar");
 	id bar = ((id (*)(id, SEL))objc_msgSend)(cls, sel_getUid("systemStatusBar"));
 	statusItem = ((id (*)(id, SEL, double))objc_msgSend)(bar, sel_getUid("statusItemWithLength:"), -2.0);
@@ -29,7 +29,7 @@ void trayInit() {
 	((void (*)(id, SEL, SEL))objc_msgSend)(button, sel_getUid("setAction:"), sel_getUid("trayAction:"));
 }
 
-void trayCleanup() {
+static void trayCleanup() {
 	if (statusItem) {
 		id cls = (id)objc_getClass("NSStatusBar");
 		id bar = ((id (*)(id, SEL))objc_msgSend)(cls, sel_getUid("systemStatusBar"));
