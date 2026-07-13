@@ -64,7 +64,7 @@ jobs:
       - name: Build Desktop
         working-directory: cmd/decoreba-desktop
         shell: bash
-        run: $(go env GOPATH)/bin/wails build -platform ${{ matrix.goos }}/${{ matrix.goarch }}
+        run: $(go env GOPATH)/bin/wails build -nopackage -platform ${{ matrix.goos }}/${{ matrix.goarch }}
 
       - name: Rename binary
         shell: bash
