@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core"
 )
 
 func frameLines(t *testing.T, frame []byte) []string {
@@ -272,6 +272,82 @@ func TestApplyRefiltersOnType(t *testing.T) {
 	p.apply([]keyEvent{{kind: keyRune, r: 's'}})
 	if p.sel >= len(p.results) && len(p.results) > 0 {
 		t.Fatalf("sel = %d out of range after refilter", p.sel)
+	}
+}
+
+func TestApplyScrollPagination(t *testing.T) {
+	p := newTestPalette()
+	// Add 20 items so we have more than maxVisible (9)
+	for i := 0; i < 18; i++ {
+		p.store.Commands = append(p.store.Commands, core.Command{
+			ID:      "x",
+			Context: "docker",
+			Title:   "extra",
+			Command: "docker ps",
+		})
+	}
+	p.chip = ""
+	p.setPool()
+	p.refilter()
+
+	if got := len(p.results); got != 21 {
+		t.Fatalf("results = %d, want 21", got)
+	}
+	if got := p.visibleCount(); got != maxVisible {
+		t.Fatalf("visibleCount = %d, want %d", got, maxVisible)
+	}
+	if p.scrollOffset != 0 {
+		t.Fatalf("scrollOffset = %d, want 0", p.scrollOffset)
+	}
+
+	// Scroll down to the last visible item on the first page.
+	for i := 0; i < maxVisible-1; i++ {
+		p.apply([]keyEvent{{kind: keyDown}})
+	}
+	if p.sel != 8 {
+		t.Fatalf("sel = %d, want 8 (last of page 0)", p.sel)
+	}
+	if p.scrollOffset != 0 {
+		t.Fatalf("scrollOffset = %d, want 0 (still page 0)", p.scrollOffset)
+	}
+
+	// One more down should scroll to page 1.
+	p.apply([]keyEvent{{kind: keyDown}})
+	if p.sel != 9 {
+		t.Fatalf("sel = %d, want 9", p.sel)
+	}
+	if p.scrollOffset != 1 {
+		t.Fatalf("scrollOffset = %d, want 1", p.scrollOffset)
+	}
+
+	// Scroll back up all the way to return to page 0.
+	for i := 0; i < 9; i++ {
+		p.apply([]keyEvent{{kind: keyUp}})
+	}
+	if p.sel != 0 {
+		t.Fatalf("sel = %d, want 0", p.sel)
+	}
+	if p.scrollOffset != 0 {
+		t.Fatalf("scrollOffset = %d, want 0", p.scrollOffset)
+	}
+
+	// Scroll all the way down.
+	for i := 0; i < 20; i++ {
+		p.apply([]keyEvent{{kind: keyDown}})
+	}
+	if p.sel != 20 {
+		t.Fatalf("sel = %d, want 20 (last item)", p.sel)
+	}
+	// scrollOffset = sel - visibleCount + 1 = 20 - 9 + 1 = 12
+	if p.scrollOffset != 12 {
+		t.Fatalf("scrollOffset = %d, want 12", p.scrollOffset)
+	}
+
+	// Refilter resets scrollOffset.
+	p.query = []rune("zzz")
+	p.refilter()
+	if p.scrollOffset != 0 {
+		t.Fatalf("scrollOffset after refilter = %d, want 0", p.scrollOffset)
 	}
 }
 

@@ -18,6 +18,7 @@ const (
 	keyShiftTab
 	keySave
 	keyCancel
+	keyEdit
 )
 
 type keyEvent struct {
@@ -73,6 +74,9 @@ func parseKeys(buf []byte) []keyEvent {
 			i++
 		case b == 0x03:
 			events = append(events, keyEvent{kind: keyCancel})
+			i++
+		case b == 0x05:
+			events = append(events, keyEvent{kind: keyEdit})
 			i++
 		case b == 0x09:
 			events = append(events, keyEvent{kind: keyTab})

@@ -3,7 +3,7 @@ package store
 import (
 	"time"
 
-	"decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core"
 )
 
 func seedCommands() []core.Command {

@@ -6,10 +6,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core"
 )
 
 func ConfigPath() (string, error) {
+	if env := os.Getenv("DECOREBA_CONFIG"); env != "" {
+		dir := filepath.Dir(env)
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return "", err
+		}
+		return env, nil
+	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err

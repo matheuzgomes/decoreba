@@ -29,18 +29,18 @@ func (p *palette) renderFrame() []byte {
 		b.WriteString(renderBoxLine(p.width, ansiDim+truncate("no results", cw)+ansiReset, ""))
 	} else {
 		for i := 0; i < p.visibleCount(); i++ {
-			r := p.results[i]
-			num := strconv.Itoa(i + 1)
+			r := p.results[p.scrollOffset+i]
+			num := strconv.Itoa(p.scrollOffset + i + 1)
 			titleBudget := cw - len(num) - 1
 			title := truncate(r.Cmd.Title, titleBudget)
 			var row strings.Builder
-			if i == p.sel {
+			if p.scrollOffset+i == p.sel {
 				row.WriteString(ansiAccent + num + ansiReset + " " + ansiBold + title + ansiReset)
 			} else {
 				row.WriteString(ansiDim + num + ansiReset + " " + title)
 			}
 			fill := ""
-			if i == p.sel {
+			if p.scrollOffset+i == p.sel {
 				fill = ansiFocusBg
 			}
 			b.WriteByte('\n')

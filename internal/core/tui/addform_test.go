@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core"
 )
 
 func newTestAddForm() *addForm {
@@ -33,7 +33,7 @@ func TestAddFormRenderLayout(t *testing.T) {
 	if !strings.Contains(lines[0], boxTL) || !strings.Contains(lines[0], boxTR) {
 		t.Fatalf("top border: %q", lines[0])
 	}
-	if !strings.Contains(lines[1], "●") || !strings.Contains(lines[1], addFormHeader) {
+	if !strings.Contains(lines[1], "●") || !strings.Contains(lines[1], newCmdHeader) {
 		t.Fatalf("header: %q", lines[1])
 	}
 	if !strings.Contains(lines[1], boxV) {

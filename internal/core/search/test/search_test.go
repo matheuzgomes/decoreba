@@ -3,9 +3,10 @@ package test
 import (
 	"reflect"
 	"testing"
+	"time"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/search"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/search"
 )
 
 func TestFuzzyMatchEmptyQuery(t *testing.T) {
@@ -181,5 +182,197 @@ func TestSortOrdering(t *testing.T) {
 func TestSortEmpty(t *testing.T) {
 	if got := search.Sort(nil, "x"); len(got) != 0 {
 		t.Fatalf("got %d results, want 0", len(got))
+	}
+}
+
+func TestFuzzyMatchAccentInsensitive(t *testing.T) {
+	// Without accents: exact match.
+	_, pos, ok := search.FuzzyMatch("maça", "maçã")
+	if !ok {
+		t.Fatal("expected accent-insensitive match")
+	}
+	if !reflect.DeepEqual(pos, []int{0, 1, 2, 3}) {
+		t.Fatalf("pos = %v, want [0 1 2 3]", pos)
+	}
+
+	// Query without accent, target with accent.
+	_, pos, ok = search.FuzzyMatch("proximo", "próximo")
+	if !ok {
+		t.Fatal("expected accent-insensitive match (query without accent)")
+	}
+	if !reflect.DeepEqual(pos, []int{0, 1, 2, 3, 4, 5, 6}) {
+		t.Fatalf("pos = %v, want [0..6]", pos)
+	}
+
+	// Query with accent, target without.
+	_, _, ok = search.FuzzyMatch("próximo", "proximo")
+	if !ok {
+		t.Fatal("expected accent-insensitive match (query with accent)")
+	}
+}
+
+func TestMatchTypoTolerance(t *testing.T) {
+	c := core.Command{
+		Context: "docker",
+		Title:   "Remove stopped containers",
+		Command: "docker container prune",
+	}
+
+	// Transposition-like: "dackar" should match "docker" via DL.
+	// (FuzzyMatch fails: d-a-c-k-a-r is not a subsequence of "docker container prune")
+	score, pos, ok := search.Match("dackar", c)
+	if !ok {
+		t.Fatal("'dackar' should match 'docker' via typo tolerance")
+	}
+	if score < 0 {
+		t.Fatalf("typo score should be >= 0, got %d", score)
+	}
+	if pos != nil {
+		t.Fatal("typo match should have nil positions")
+	}
+
+	// Missing char: "dockr" should match "docker" via DL.
+	// (FuzzyMatch finds d-o-c-k-r as subsequence, so positions will be non-nil.)
+	if _, p, ok := search.Match("dockr", c); !ok {
+		t.Fatal("'dockr' should match 'docker'")
+	} else if p == nil {
+		t.Fatal("'dockr' is a valid subsequence, positions should not be nil")
+	}
+
+	// Extra char: "dockker" should match.
+	if _, _, ok := search.Match("dockker", c); !ok {
+		t.Fatal("'dockker' should match 'docker' via typo tolerance")
+	}
+
+	// No match at all: very different strings.
+	if _, _, ok := search.Match("kubernetes", c); ok {
+		t.Fatal("'kubernetes' should not match")
+	}
+}
+
+func TestMatchTypoShortQueryNoFalsePositive(t *testing.T) {
+	c := core.Command{
+		Context: "git",
+		Title:   "Show stash",
+		Command: "git stash show",
+	}
+
+	// 2-char query: DL does not fire (too many false positives).
+	// "gi" vs "git" is distance 1, but FuzzyMatch finds it as subsequence anyway.
+	if _, _, ok := search.Match("gi", c); !ok {
+		t.Fatal("'gi' should match via FuzzyMatch subsequence")
+	}
+
+	// "gz" vs everything is distance 2+, DL would fire but short queries skip DL.
+	// And FuzzyMatch should fail.
+	if _, _, ok := search.Match("gz", c); ok {
+		t.Fatal("'gz' should not match — 2 chars, no FuzzyMatch, DL disabled")
+	}
+}
+
+func TestMatchTypoTagsNotChecked(t *testing.T) {
+	c := core.Command{
+		Context: "docker",
+		Title:   "List containers",
+		Command: "docker ps",
+		Tags:    []string{"cleanup"},
+	}
+
+	// "laenup" vs tag "cleanup": FuzzyMatch fails (l-a-e: wrong order after a),
+	// but DL distance = 1 (l→c). Tags are excluded from DL, so no match.
+	if _, _, ok := search.Match("laenup", c); ok {
+		t.Fatal("'laenup' should not match — DL does not check tags")
+	}
+
+	// But FuzzyMatch subsequence on tags still works.
+	if _, _, ok := search.Match("clean", c); !ok {
+		t.Fatal("'clean' should match tag 'cleanup' via FuzzyMatch")
+	}
+}
+
+func TestRecencyBonus(t *testing.T) {
+	now := time.Now()
+
+	cRecent := core.Command{
+		Context:    "docker",
+		Title:      "prune",
+		Command:    "docker container prune",
+		LastUsedAt: now,
+	}
+	cOld := core.Command{
+		Context:    "docker",
+		Title:      "ps",
+		Command:    "docker ps",
+		UsageCount: 100,
+		// LastUsedAt is zero — no recency bonus.
+	}
+
+	// Both match empty query. Recent one should score higher despite lower UsageCount.
+	scoreRecent, _, _ := search.Match("", cRecent)
+	scoreOld, _, _ := search.Match("", cOld)
+
+	if scoreRecent <= scoreOld {
+		t.Fatalf("recent (%d) should beat old (%d)", scoreRecent, scoreOld)
+	}
+	if scoreRecent != 10 {
+		t.Fatalf("recent score = %d, want 10 (baseRecency)", scoreRecent)
+	}
+	if scoreOld != 0 {
+		t.Fatalf("old score = %d, want 0", scoreOld)
+	}
+
+	// Old command with far past LastUsedAt should have low bonus.
+	cOld.LastUsedAt = now.Add(-720 * time.Hour) // 30 days
+	scoreOld, _, _ = search.Match("", cOld)
+	if scoreOld > 1 {
+		t.Fatalf("30-day old recency = %d, want near 0", scoreOld)
+	}
+}
+
+func TestRecencyTiebreaker(t *testing.T) {
+	now := time.Now()
+
+	pool := []core.Command{
+		{
+			ID:         "recent",
+			Context:    "docker",
+			Title:      "ps",
+			Command:    "docker ps",
+			LastUsedAt: now,
+		},
+		{
+			ID:         "old",
+			Context:    "docker",
+			Title:      "container prune",
+			Command:    "docker container prune",
+			UsageCount: 50,
+			// LastUsedAt zero — no recency.
+		},
+	}
+
+	results := search.Sort(pool, "docker")
+	if len(results) != 2 {
+		t.Fatalf("got %d results, want 2", len(results))
+	}
+	if results[0].Cmd.ID != "recent" {
+		t.Fatalf("recent command should rank first, got ID=%s", results[0].Cmd.ID)
+	}
+}
+
+func TestMatchesWithRecency(t *testing.T) {
+	c := core.Command{
+		Context:    "git",
+		Title:      "Undo",
+		Command:    "git reset",
+		LastUsedAt: time.Now(),
+	}
+
+	score, ok := search.Matches("git", c)
+	if !ok {
+		t.Fatal("expected match")
+	}
+	// Score should be positive (FuzzyMatch + recency bonus).
+	if score <= 0 {
+		t.Fatalf("score = %d, want > 0", score)
 	}
 }

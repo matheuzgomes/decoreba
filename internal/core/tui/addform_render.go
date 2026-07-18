@@ -125,7 +125,11 @@ func (f *addForm) renderFrame() []byte {
 
 	b.WriteString(renderBoxTop(f.width))
 
-	header := dotColor + "●" + ansiReset + " " + ansiDim + addFormHeader + ansiReset
+	headerText := newCmdHeader
+	if f.editing {
+		headerText = editCmdHeader
+	}
+	header := dotColor + "●" + ansiReset + " " + ansiDim + headerText + ansiReset
 	b.WriteByte('\n')
 	b.WriteString(renderBoxLine(f.width, header, ""))
 

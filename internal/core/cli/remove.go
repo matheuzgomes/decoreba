@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"decoreba/internal/core/store"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
 func cmdRemove(args []string) {

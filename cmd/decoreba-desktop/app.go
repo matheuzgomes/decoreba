@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/clipboard"
-	"decoreba/internal/core/search"
-	"decoreba/internal/core/settings"
-	"decoreba/internal/core/store"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/clipboard"
+	"github.com/matheuzgomes/decoreba/internal/core/search"
+	"github.com/matheuzgomes/decoreba/internal/core/settings"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -148,6 +148,20 @@ func (a *App) CopyCommand(id string) error {
 				return err
 			}
 			a.store.Commands[i].UsageCount++
+			a.store.Commands[i].LastUsedAt = time.Now()
+			return store.Save(a.store)
+		}
+	}
+	return nil
+}
+
+func (a *App) EditCommand(id, ctx, title, command string) error {
+	for i := range a.store.Commands {
+		if a.store.Commands[i].ID == id {
+			a.store.Commands[i].Context = strings.ToLower(ctx)
+			a.store.Commands[i].Title = title
+			a.store.Commands[i].Command = command
+			a.store.Commands[i].UpdatedAt = time.Now()
 			return store.Save(a.store)
 		}
 	}

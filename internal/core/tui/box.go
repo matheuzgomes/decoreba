@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"decoreba/internal/core/term"
+	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 // --- ANSI and box drawing constants ---

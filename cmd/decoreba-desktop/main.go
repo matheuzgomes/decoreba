@@ -8,11 +8,11 @@ import (
 	"log"
 	"os"
 
-	"decoreba/internal/core/clipboard"
-	"decoreba/internal/core/store"
+	"github.com/matheuzgomes/decoreba/internal/core/clipboard"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 
-	"decoreba/desktop/internal/platform/hotkey"
-	"decoreba/desktop/internal/platform/tray"
+	"github.com/matheuzgomes/decoreba/desktop/internal/platform/hotkey"
+	"github.com/matheuzgomes/decoreba/desktop/internal/platform/tray"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"

@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/store"
-	"decoreba/internal/core/term"
-	"decoreba/internal/core/tui"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
+	"github.com/matheuzgomes/decoreba/internal/core/term"
+	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
 func cmdAdd() {

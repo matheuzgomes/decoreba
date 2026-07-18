@@ -7,28 +7,38 @@ import (
 	"os"
 	"strings"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/search"
-	"decoreba/internal/core/term"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/search"
+	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 const (
-	paletteHint = "↵ copy   ↑↓ navigate   1-9 direct   esc cancel"
+	paletteHint = "↵ copy   ↑↓ navigate   1-9 direct   ^e edit   esc cancel"
 	maxVisible  = 9
 )
 
+// PaletteAction describes what the user chose to do with the selected command.
+type PaletteAction int
+
+const (
+	ActionCopy PaletteAction = iota
+	ActionEdit
+)
+
 type palette struct {
-	store      *core.Store
-	chip       string
-	query      []rune
-	pool       []core.Command
-	results    []search.Scored
-	sel        int
-	lines      int
-	parkedLine int
-	width      int
-	height     int
-	out        io.Writer
+	store        *core.Store
+	chip         string
+	query        []rune
+	pool         []core.Command
+	results      []search.Scored
+	sel          int
+	scrollOffset int
+	action       PaletteAction
+	lines        int
+	parkedLine   int
+	width        int
+	height       int
+	out          io.Writer
 }
 
 func (p *palette) writer() io.Writer {
@@ -39,9 +49,10 @@ func (p *palette) writer() io.Writer {
 }
 
 // RunPalette opens an interactive inline command palette. Returns the
-// selected command or nil when the user cancels.
-func RunPalette(store *core.Store, context, initialQuery string) (*core.Command, error) {
-	p := &palette{store: store, chip: context}
+// selected command, the action the user chose (copy or edit), or nil when
+// the user cancels.
+func RunPalette(store *core.Store, context, initialQuery string) (*core.Command, PaletteAction, error) {
+	p := &palette{store: store, chip: context, action: ActionCopy, scrollOffset: 0}
 	p.setPool()
 	if initialQuery != "" {
 		p.query = []rune(initialQuery)
@@ -50,7 +61,7 @@ func RunPalette(store *core.Store, context, initialQuery string) (*core.Command,
 
 	restore, err := term.MakeRaw()
 	if err != nil {
-		return nil, err
+		return nil, ActionCopy, err
 	}
 	defer restore()
 
@@ -62,7 +73,7 @@ func RunPalette(store *core.Store, context, initialQuery string) (*core.Command,
 		n, err := os.Stdin.Read(buf)
 		if err != nil {
 			p.close()
-			return nil, err
+			return nil, ActionCopy, err
 		}
 		// A lone ESC byte may be the Esc key or the start of an arrow
 		// sequence; if more bytes are already available, read them in.
@@ -74,7 +85,7 @@ func RunPalette(store *core.Store, context, initialQuery string) (*core.Command,
 		done, chosen := p.apply(parseKeys(buf[:n]))
 		if done {
 			p.close()
-			return chosen, nil
+			return chosen, p.action, nil
 		}
 		p.redraw()
 	}
@@ -87,15 +98,27 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 			return true, nil
 		case keyEnter:
 			if len(p.results) > 0 {
+				p.action = ActionCopy
+				return true, &p.results[p.sel].Cmd
+			}
+		case keyEdit:
+			if len(p.results) > 0 {
+				p.action = ActionEdit
 				return true, &p.results[p.sel].Cmd
 			}
 		case keyUp:
 			if p.sel > 0 {
 				p.sel--
+				if p.sel < p.scrollOffset {
+					p.scrollOffset = p.sel
+				}
 			}
 		case keyDown:
-			if p.sel < p.visibleCount()-1 {
+			if p.sel < len(p.results)-1 {
 				p.sel++
+				if p.sel >= p.scrollOffset+p.visibleCount() {
+					p.scrollOffset = p.sel - p.visibleCount() + 1
+				}
 			}
 		case keyBackspace:
 			if len(p.query) > 0 {
@@ -111,7 +134,8 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 		case keyRune:
 			if len(p.query) == 0 && ev.r >= '1' && ev.r <= '9' {
 				if idx := int(ev.r - '1'); idx < p.visibleCount() {
-					return true, &p.results[idx].Cmd
+					p.action = ActionCopy
+					return true, &p.results[p.scrollOffset+idx].Cmd
 				}
 			}
 			p.query = append(p.query, ev.r)
@@ -136,6 +160,7 @@ func (p *palette) setPool() {
 
 func (p *palette) refilter() {
 	p.results = search.Sort(p.pool, string(p.query))
+	p.scrollOffset = 0
 	if p.sel >= len(p.results) {
 		p.sel = len(p.results) - 1
 	}
@@ -145,7 +170,11 @@ func (p *palette) refilter() {
 }
 
 func (p *palette) visibleCount() int {
-	n := len(p.results)
+	remaining := len(p.results) - p.scrollOffset
+	if remaining <= 0 {
+		return 0
+	}
+	n := remaining
 	if n > maxVisible {
 		n = maxVisible
 	}

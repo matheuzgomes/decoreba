@@ -1,9 +1,9 @@
-module decoreba/desktop
+module github.com/matheuzgomes/decoreba/desktop
 
 go 1.25.0
 
 require (
-	decoreba v0.0.0
+	github.com/matheuzgomes/decoreba v0.0.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/wailsapp/wails/v2 v2.13.0
 )
@@ -38,4 +38,4 @@ require (
 	golang.org/x/text v0.37.0 // indirect
 )
 
-replace decoreba => ../..
+replace github.com/matheuzgomes/decoreba => ../..

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/term"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 const (
@@ -20,9 +20,10 @@ const (
 	fieldNotes   = 4
 	fieldCount   = 5
 
-	addFormHint   = "tab next   ⇧tab previous   ^s save   esc cancel"
-	addFormHeader = "+ new command"
-	labelPad      = 9
+	addFormHint  = "tab next   ⇧tab previous   ^s save   esc cancel"
+	newCmdHeader = "+ new command"
+	editCmdHeader = "edit command"
+	labelPad     = 9
 )
 
 var fieldLabels = [fieldCount]string{
@@ -42,6 +43,8 @@ type addForm struct {
 	errMsg     string
 	errFlash   int
 	contexts   []string
+	editing    bool
+	existing   *core.Command
 	lines      int
 	parkedLine int
 	width      int
@@ -59,10 +62,31 @@ func (f *addForm) writer() io.Writer {
 // RunAddForm opens an interactive inline command-creation form. Returns the
 // new command or nil when the user cancels.
 func RunAddForm(store *core.Store) (*core.Command, error) {
+	return runForm(store, nil)
+}
+
+// RunEditForm opens the same interactive form pre-filled with an existing
+// command. Returns the updated command (with the same ID) or nil on cancel.
+func RunEditForm(store *core.Store, existing *core.Command) (*core.Command, error) {
+	return runForm(store, existing)
+}
+
+func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 	f := &addForm{
 		store:    store,
 		errField: -1,
 		contexts: collectContexts(store),
+		editing:  existing != nil,
+		existing: existing,
+	}
+	if existing != nil {
+		f.fields[fieldContext] = []rune(existing.Context)
+		f.fields[fieldTitle] = []rune(existing.Title)
+		f.fields[fieldCommand] = []rune(existing.Command)
+		f.fields[fieldTags] = []rune(strings.Join(existing.Tags, ", "))
+		f.fields[fieldNotes] = []rune(existing.Notes)
+		f.focus = fieldContext
+		f.cursor = len(f.fields[fieldContext])
 	}
 
 	restore, err := term.MakeRaw()
@@ -242,7 +266,6 @@ func (f *addForm) trySave() (*core.Command, bool) {
 
 	now := time.Now()
 	cmd := &core.Command{
-		ID:        core.GenID(),
 		Context:   strings.ToLower(ctx),
 		Title:     strings.TrimSpace(string(f.fields[fieldTitle])),
 		Command:   cmdStr,
@@ -250,6 +273,15 @@ func (f *addForm) trySave() (*core.Command, bool) {
 		Notes:     strings.TrimSpace(string(f.fields[fieldNotes])),
 		CreatedAt: now,
 		UpdatedAt: now,
+	}
+
+	if f.editing && f.existing != nil {
+		cmd.ID = f.existing.ID
+		cmd.CreatedAt = f.existing.CreatedAt
+		cmd.UsageCount = f.existing.UsageCount
+		cmd.LastUsedAt = f.existing.LastUsedAt
+	} else {
+		cmd.ID = core.GenID()
 	}
 	return cmd, true
 }

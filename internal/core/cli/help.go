@@ -13,6 +13,9 @@ Usage:
   decoreba list                 List contexts and command count
   decoreba list <context>       List commands saved in a context
   decoreba rm <id>              Remove a command by id (or id prefix)
+  decoreba edit <id>            Edit a command by id (or id prefix)
+  decoreba stats                Show vault statistics
+  decoreba completion <shell>   Generate shell completion (bash|zsh|fish)
   decoreba version              Show version
   decoreba help                 Show this help
 

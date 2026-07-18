@@ -1,6 +1,6 @@
 package main
 
-import "decoreba/internal/core/cli"
+import "github.com/matheuzgomes/decoreba/internal/core/cli"
 
 func main() {
 	cli.Run()

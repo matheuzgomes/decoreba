@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/clipboard"
-	"decoreba/internal/core/search"
-	"decoreba/internal/core/store"
-	"decoreba/internal/core/term"
-	"decoreba/internal/core/tui"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/clipboard"
+	"github.com/matheuzgomes/decoreba/internal/core/search"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
+	"github.com/matheuzgomes/decoreba/internal/core/term"
+	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
 func runSearch(context, query string) {
@@ -22,12 +23,25 @@ func runSearch(context, query string) {
 		return
 	}
 
-	chosen, err := tui.RunPalette(s, context, query)
+	chosen, action, err := tui.RunPalette(s, context, query)
 	check(err)
 	if chosen == nil {
 		return
 	}
-	confirmCopy(s, chosen)
+
+	switch action {
+	case tui.ActionEdit:
+		edited, err := tui.RunEditForm(s, chosen)
+		check(err)
+		if edited == nil {
+			return
+		}
+		replaceCommand(s, edited)
+		check(store.Save(s))
+		fmt.Printf("✓ Command updated in %q (id: %s)\n", edited.Context, edited.ID)
+	default:
+		confirmCopy(s, chosen)
+	}
 }
 
 func confirmCopy(s *core.Store, chosen *core.Command) {
@@ -40,6 +54,7 @@ func confirmCopy(s *core.Store, chosen *core.Command) {
 	for i := range s.Commands {
 		if s.Commands[i].ID == chosen.ID {
 			s.Commands[i].UsageCount++
+			s.Commands[i].LastUsedAt = time.Now()
 			break
 		}
 	}

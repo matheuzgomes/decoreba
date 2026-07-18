@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"decoreba/internal/core"
-	"decoreba/internal/core/store"
+	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
 func cmdList(args []string) {

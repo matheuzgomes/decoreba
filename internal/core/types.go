@@ -14,6 +14,7 @@ type Command struct {
 	Tags       []string  `json:"tags,omitempty"`
 	Notes      string    `json:"notes,omitempty"`
 	UsageCount int       `json:"usage_count"`
+	LastUsedAt time.Time `json:"last_used_at"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
