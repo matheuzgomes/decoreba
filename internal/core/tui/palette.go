@@ -1,0 +1,206 @@
+package tui
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"decoreba/internal/core"
+	"decoreba/internal/core/search"
+	"decoreba/internal/core/term"
+)
+
+const (
+	paletteHint = "↵ copy   ↑↓ navigate   1-9 direct   esc cancel"
+	maxVisible  = 9
+)
+
+type palette struct {
+	store      *core.Store
+	chip       string
+	query      []rune
+	pool       []core.Command
+	results    []search.Scored
+	sel        int
+	lines      int
+	parkedLine int
+	width      int
+	height     int
+	out        io.Writer
+}
+
+func (p *palette) writer() io.Writer {
+	if p.out != nil {
+		return p.out
+	}
+	return os.Stdout
+}
+
+// RunPalette opens an interactive inline command palette. Returns the
+// selected command or nil when the user cancels.
+func RunPalette(store *core.Store, context, initialQuery string) (*core.Command, error) {
+	p := &palette{store: store, chip: context}
+	p.setPool()
+	if initialQuery != "" {
+		p.query = []rune(initialQuery)
+	}
+	p.refilter()
+
+	restore, err := term.MakeRaw()
+	if err != nil {
+		return nil, err
+	}
+	defer restore()
+
+	p.width, p.height = readTermSize()
+	p.redraw()
+
+	buf := make([]byte, 64)
+	for {
+		n, err := os.Stdin.Read(buf)
+		if err != nil {
+			p.close()
+			return nil, err
+		}
+		// A lone ESC byte may be the Esc key or the start of an arrow
+		// sequence; if more bytes are already available, read them in.
+		if n == 1 && buf[0] == 0x1b && term.InputAvailable(25) {
+			if m, err := os.Stdin.Read(buf[1:]); err == nil {
+				n += m
+			}
+		}
+		done, chosen := p.apply(parseKeys(buf[:n]))
+		if done {
+			p.close()
+			return chosen, nil
+		}
+		p.redraw()
+	}
+}
+
+func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
+	for _, ev := range events {
+		switch ev.kind {
+		case keyEsc, keyCancel:
+			return true, nil
+		case keyEnter:
+			if len(p.results) > 0 {
+				return true, &p.results[p.sel].Cmd
+			}
+		case keyUp:
+			if p.sel > 0 {
+				p.sel--
+			}
+		case keyDown:
+			if p.sel < p.visibleCount()-1 {
+				p.sel++
+			}
+		case keyBackspace:
+			if len(p.query) > 0 {
+				p.query = p.query[:len(p.query)-1]
+				p.refilter()
+			} else if p.chip != "" {
+				// Backspace on the empty field drops the context chip and
+				// expands the search to every context.
+				p.chip = ""
+				p.setPool()
+				p.refilter()
+			}
+		case keyRune:
+			if len(p.query) == 0 && ev.r >= '1' && ev.r <= '9' {
+				if idx := int(ev.r - '1'); idx < p.visibleCount() {
+					return true, &p.results[idx].Cmd
+				}
+			}
+			p.query = append(p.query, ev.r)
+			p.refilter()
+		}
+	}
+	return false, nil
+}
+
+func (p *palette) setPool() {
+	p.pool = nil
+	if p.chip == "" {
+		p.pool = p.store.Commands
+		return
+	}
+	for _, c := range p.store.Commands {
+		if strings.EqualFold(c.Context, p.chip) {
+			p.pool = append(p.pool, c)
+		}
+	}
+}
+
+func (p *palette) refilter() {
+	p.results = search.Sort(p.pool, string(p.query))
+	if p.sel >= len(p.results) {
+		p.sel = len(p.results) - 1
+	}
+	if p.sel < 0 {
+		p.sel = 0
+	}
+}
+
+func (p *palette) visibleCount() int {
+	n := len(p.results)
+	if n > maxVisible {
+		n = maxVisible
+	}
+	if budget := p.height - 2; budget >= 0 && budget/2 < n {
+		n = budget / 2
+	}
+	return n
+}
+
+func (p *palette) frameLines() int {
+	itemLines := 1
+	if len(p.results) > 0 {
+		itemLines = p.visibleCount() * 2
+	}
+	return 1 + 1 + itemLines + 1 + 1
+}
+
+func (p *palette) inputCol() int {
+	col := boxLeftPad + 2 + len(p.query)
+	if p.chip != "" {
+		col += len([]rune(p.chip)) + 1
+	}
+	return col
+}
+
+func (p *palette) searchLine() int { return 1 }
+
+func (p *palette) redraw() {
+	p.width, p.height = readTermSize()
+	var b bytes.Buffer
+	if p.lines > 0 && p.parkedLine > 0 {
+		fmt.Fprintf(&b, "\x1b[%dA", p.parkedLine)
+	}
+	b.WriteString("\r")
+	b.Write(p.renderFrame())
+	b.WriteString("\x1b[J")
+	newLines := p.frameLines()
+	up := newLines - 1 - p.searchLine()
+	if up > 0 {
+		fmt.Fprintf(&b, "\x1b[%dA", up)
+	}
+	b.WriteString("\r")
+	if col := p.inputCol(); col > 0 {
+		fmt.Fprintf(&b, "\x1b[%dC", col)
+	}
+	_, _ = p.writer().Write(b.Bytes())
+	p.lines = newLines
+	p.parkedLine = p.searchLine()
+}
+
+func (p *palette) close() {
+	if p.lines > 0 && p.parkedLine > 0 {
+		fmt.Fprintf(p.writer(), "\x1b[%dA", p.parkedLine)
+	}
+	_, _ = p.writer().Write([]byte("\r\x1b[J"))
+	p.lines = 0
+	p.parkedLine = 0
+}

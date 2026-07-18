@@ -1,4 +1,4 @@
-package core
+package clipboard
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"runtime"
 )
 
-func CopyToClipboard(text string) error {
+func Copy(text string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":

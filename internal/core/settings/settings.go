@@ -1,4 +1,4 @@
-package core
+package settings
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ type Settings struct {
 	AlwaysOnTop bool    `json:"always_on_top"`
 }
 
-func DefaultSettings() Settings {
+func Default() Settings {
 	return Settings{
 		Width:       560,
 		Height:      440,
@@ -34,21 +34,21 @@ func settingsPath() (string, error) {
 	return filepath.Join(appDir, "settings.json"), nil
 }
 
-func LoadSettings() (Settings, error) {
+func Load() (Settings, error) {
 	path, err := settingsPath()
 	if err != nil {
-		return DefaultSettings(), err
+		return Default(), err
 	}
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		return DefaultSettings(), nil
+		return Default(), nil
 	}
 	if err != nil {
-		return DefaultSettings(), err
+		return Default(), err
 	}
 	var s Settings
 	if err := json.Unmarshal(data, &s); err != nil {
-		return DefaultSettings(), nil
+		return Default(), nil
 	}
 	if s.Width < 400 {
 		s.Width = 400
@@ -59,7 +59,7 @@ func LoadSettings() (Settings, error) {
 	return s, nil
 }
 
-func SaveSettings(s Settings) error {
+func Save(s Settings) error {
 	path, err := settingsPath()
 	if err != nil {
 		return err

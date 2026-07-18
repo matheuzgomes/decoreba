@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"decoreba/internal/core"
+	"decoreba/internal/core/clipboard"
+	"decoreba/internal/core/search"
+	"decoreba/internal/core/settings"
+	"decoreba/internal/core/store"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -14,30 +18,30 @@ import (
 type App struct {
 	store    *core.Store
 	mtime    time.Time
-	settings core.Settings
+	settings settings.Settings
 	ctx      context.Context
 }
 
 func NewApp() *App {
-	s, err := core.Load()
+	s, err := store.Load()
 	if err != nil {
 		s = &core.Store{Version: 1}
 	}
-	settings, err := core.LoadSettings()
+	st, err := settings.Load()
 	if err != nil {
-		settings = core.DefaultSettings()
+		st = settings.Default()
 	}
-	a := &App{store: s, settings: settings}
+	a := &App{store: s, settings: st}
 	a.recordMtime()
 	return a
 }
 
 func (a *App) recordMtime() {
-	path, err := core.ConfigPath()
+	path, err := store.ConfigPath()
 	if err != nil {
 		return
 	}
-	info, err := core.StatPath(path)
+	info, err := store.StatPath(path)
 	if err != nil {
 		return
 	}
@@ -45,7 +49,7 @@ func (a *App) recordMtime() {
 }
 
 func (a *App) Refresh() {
-	s, err := core.Load()
+	s, err := store.Load()
 	if err != nil {
 		return
 	}
@@ -88,7 +92,7 @@ func (a *App) Search(query, context string) []searchResult {
 
 	var results []searchResult
 	for _, c := range pool {
-		if score, ok := core.MatchesCommand(query, c); ok {
+		if score, ok := search.Matches(query, c); ok {
 			results = append(results, searchResult{Cmd: c, Score: score})
 		}
 	}
@@ -133,18 +137,18 @@ func (a *App) AddCommand(ctx, title, command string) error {
 		UpdatedAt: now,
 	}
 	a.store.Commands = append(a.store.Commands, cmd)
-	return core.Save(a.store)
+	return store.Save(a.store)
 }
 
 func (a *App) CopyCommand(id string) error {
 	for i := range a.store.Commands {
 		if a.store.Commands[i].ID == id {
 			cmd := a.store.Commands[i]
-			if err := core.CopyToClipboard(cmd.Command); err != nil {
+			if err := clipboard.Copy(cmd.Command); err != nil {
 				return err
 			}
 			a.store.Commands[i].UsageCount++
-			return core.Save(a.store)
+			return store.Save(a.store)
 		}
 	}
 	return nil
@@ -154,7 +158,7 @@ func (a *App) DeleteCommand(id string) error {
 	for i := range a.store.Commands {
 		if a.store.Commands[i].ID == id {
 			a.store.Commands = append(a.store.Commands[:i], a.store.Commands[i+1:]...)
-			return core.Save(a.store)
+			return store.Save(a.store)
 		}
 	}
 	return nil
@@ -164,11 +168,11 @@ func (a *App) SetContext(ctx context.Context) {
 	a.ctx = ctx
 }
 
-func (a *App) GetSettings() core.Settings {
+func (a *App) GetSettings() settings.Settings {
 	return a.settings
 }
 
-func (a *App) SaveSettings(s core.Settings) error {
+func (a *App) SaveSettings(s settings.Settings) error {
 	if s.Width < 400 {
 		s.Width = 400
 	}
@@ -187,7 +191,7 @@ func (a *App) SaveSettings(s core.Settings) error {
 		runtime.WindowSetAlwaysOnTop(a.ctx, s.AlwaysOnTop)
 	}
 
-	if err := core.SaveSettings(s); err != nil {
+	if err := settings.Save(s); err != nil {
 		return err
 	}
 	a.settings = s

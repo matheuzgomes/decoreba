@@ -1,6 +1,6 @@
 //go:build !windows
 
-package core
+package clipboard
 
 import "os/exec"
 

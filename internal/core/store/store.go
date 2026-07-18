@@ -1,25 +1,15 @@
-package core
+package store
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"decoreba/internal/core"
 )
 
 func ConfigPath() (string, error) {
-	path, err := configPath()
-	if err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
-func StatPath(path string) (os.FileInfo, error) {
-	return os.Stat(path)
-}
-
-func configPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -31,14 +21,18 @@ func configPath() (string, error) {
 	return filepath.Join(appDir, "commands.json"), nil
 }
 
-func Load() (*Store, error) {
-	path, err := configPath()
+func StatPath(path string) (os.FileInfo, error) {
+	return os.Stat(path)
+}
+
+func Load() (*core.Store, error) {
+	path, err := ConfigPath()
 	if err != nil {
 		return nil, err
 	}
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		s := &Store{Version: 1, Commands: seedCommands()}
+		s := &core.Store{Version: 1, Commands: seedCommands()}
 		if saveErr := Save(s); saveErr != nil {
 			return nil, saveErr
 		}
@@ -47,15 +41,17 @@ func Load() (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	var s Store
+	var s core.Store
 	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, fmt.Errorf("corrupted commands file (%s): %w", path, err)
 	}
 	return &s, nil
 }
 
-func Save(s *Store) error {
-	path, err := configPath()
+// Save writes atomically: data lands in a .tmp file and is renamed over the
+// target, so a kill mid-write cannot corrupt the store.
+func Save(s *core.Store) error {
+	path, err := ConfigPath()
 	if err != nil {
 		return err
 	}

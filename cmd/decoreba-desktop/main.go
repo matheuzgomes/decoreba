@@ -8,10 +8,11 @@ import (
 	"log"
 	"os"
 
-	"decoreba/internal/core"
+	"decoreba/internal/core/clipboard"
+	"decoreba/internal/core/store"
 
-	"decoreba/platform/hotkey"
-	"decoreba/platform/tray"
+	"decoreba/desktop/internal/platform/hotkey"
+	"decoreba/desktop/internal/platform/tray"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -37,7 +38,7 @@ func main() {
 	trayAvailable := tray.Available()
 	startHidden := trayAvailable
 
-	if core.IsWSL() {
+	if clipboard.IsWSL() {
 		if !trayAvailable {
 			log.Printf("main: WSL detected, no tray available — window will start visible.")
 			log.Printf("main: hotkey Alt+Shift+%s may conflict with Windows host shortcuts.", *hotkeyKey)
@@ -49,16 +50,16 @@ func main() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:            "decoreba",
-		Width:            app.settings.Width,
-		Height:           app.settings.Height,
-		MinWidth:         400,
-		MinHeight:        280,
-		MaxWidth:         1200,
-		MaxHeight:        800,
-		Frameless:        true,
-		AlwaysOnTop:      app.settings.AlwaysOnTop,
-		StartHidden:      startHidden,
+		Title:             "decoreba",
+		Width:             app.settings.Width,
+		Height:            app.settings.Height,
+		MinWidth:          400,
+		MinHeight:         280,
+		MaxWidth:          1200,
+		MaxHeight:         800,
+		Frameless:         true,
+		AlwaysOnTop:       app.settings.AlwaysOnTop,
+		StartHidden:       startHidden,
 		HideWindowOnClose: true,
 
 		AssetServer: &assetserver.Options{
@@ -124,7 +125,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if core.Save(app.store) != nil {
+	if store.Save(app.store) != nil {
 		log.Fatal("failed to save store")
 	}
 }
