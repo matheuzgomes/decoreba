@@ -53,6 +53,7 @@ jobs:
           path: decoreba-*
 
   desktop:
+    if: false
     strategy:
       matrix:
         include:
