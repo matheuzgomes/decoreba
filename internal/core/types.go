@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"strings"
 	"time"
 )
 
@@ -35,6 +36,26 @@ func (c Command) IsWorkflow() bool {
 type Store struct {
 	Version  int       `json:"version"`
 	Commands []Command `json:"commands"`
+}
+
+// Storer is the persistence seam for the command store.
+type Storer interface {
+	Load() (*Store, error)
+	Save(*Store) error
+}
+
+// FindByPrefix returns the unique command whose ID starts with the given
+// prefix, and the total number of matches.
+func (s *Store) FindByPrefix(prefix string) (*Command, int) {
+	var found *Command
+	count := 0
+	for i := range s.Commands {
+		if strings.HasPrefix(s.Commands[i].ID, prefix) {
+			found = &s.Commands[i]
+			count++
+		}
+	}
+	return found, count
 }
 
 func GenID() string {

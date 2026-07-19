@@ -28,6 +28,7 @@ type listBrowser struct {
 	width      int
 	height     int
 	out        io.Writer
+	onPin      func(*core.Command)
 }
 
 func (b *listBrowser) writer() io.Writer {
@@ -37,7 +38,7 @@ func (b *listBrowser) writer() io.Writer {
 	return os.Stdout
 }
 
-func RunListBrowser(s *core.Store) (*core.Command, PaletteAction, error) {
+func RunListBrowser(s *core.Store, onPin ...func(*core.Command)) (*core.Command, PaletteAction, error) {
 	counts := map[string]int{}
 	for _, c := range s.Commands {
 		counts[c.Context]++
@@ -61,6 +62,9 @@ func RunListBrowser(s *core.Store) (*core.Command, PaletteAction, error) {
 		store:   s,
 		entries: entries,
 	}
+	if len(onPin) > 0 {
+		b.onPin = onPin[0]
+	}
 
 	if UseTTY {
 		f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
@@ -81,20 +85,18 @@ func RunListBrowser(s *core.Store) (*core.Command, PaletteAction, error) {
 
 	buf := make([]byte, 64)
 	for {
-		n, err := os.Stdin.Read(buf)
+		n, err := term.ReadInput(buf)
 		if err != nil {
 			b.close()
 			return nil, ActionCopy, err
-		}
-		if n == 1 && buf[0] == 0x1b && term.InputAvailable(25) {
-			if m, err := os.Stdin.Read(buf[1:]); err == nil {
-				n += m
-			}
 		}
 		done := b.apply(parseKeys(buf[:n]))
 		if done {
 			b.close()
 			ctx := b.entries[b.sel].Name
+			if b.onPin != nil {
+				return RunPalette(s, ctx, "", b.onPin)
+			}
 			return RunPalette(s, ctx, "")
 		}
 		b.redraw()

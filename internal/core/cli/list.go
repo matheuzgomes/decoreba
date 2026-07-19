@@ -11,18 +11,19 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
-func cmdList(args []string) {
-	s, err := store.Load()
-	check(err)
+func cmdList(s *core.Store, args []string, shellOutput bool) {
+	onPin := func(cmd *core.Command) {
+		_ = store.Save(s)
+	}
 
 	if len(args) == 0 {
 		if term.IsTerminal() {
-			chosen, action, err := tui.RunListBrowser(s)
+			chosen, action, err := tui.RunListBrowser(s, onPin)
 			check(err)
 			if chosen == nil {
 				return
 			}
-			handleListResult(s, chosen, action)
+			handleActionResult(s, chosen, action, shellOutput)
 		} else {
 			printContexts(s)
 		}
@@ -31,57 +32,14 @@ func cmdList(args []string) {
 
 	context := args[0]
 	if term.IsTerminal() {
-		chosen, action, err := tui.RunPalette(s, context, "")
+		chosen, action, err := tui.RunPalette(s, context, "", onPin)
 		check(err)
 		if chosen == nil {
 			return
 		}
-		handleListResult(s, chosen, action)
+		handleActionResult(s, chosen, action, shellOutput)
 	} else {
 		printContextCommands(s, context)
-	}
-}
-
-func handleListResult(s *core.Store, chosen *core.Command, action tui.PaletteAction) {
-	if chosen.IsWorkflow() {
-		bumpUsage(s, chosen)
-		_ = tui.RunWorkflow(chosen)
-		return
-	}
-
-	if tui.HasVariables(chosen.Command) && action == tui.ActionCopy {
-		resolved, cancelled, err := tui.ResolveCommandInteractive(chosen.Command)
-		check(err)
-		if cancelled {
-			return
-		}
-		chosen.Command = resolved
-	}
-
-	switch action {
-	case tui.ActionEdit:
-		edited, err := tui.RunEditForm(s, chosen)
-		check(err)
-		if edited == nil {
-			return
-		}
-		replaceCommand(s, edited)
-		check(store.Save(s))
-		fmt.Printf("✓ Command updated in %q (id: %s)\n", edited.Context, edited.ID)
-	case tui.ActionExecute:
-		bumpUsage(s, chosen)
-		if shellOutput {
-			fmt.Print("EXEC:" + chosen.Command)
-		} else {
-			_ = tui.RunCommand(chosen)
-		}
-	default:
-		bumpUsage(s, chosen)
-		if shellOutput {
-			fmt.Print(chosen.Command)
-		} else {
-			confirmCopy(s, chosen)
-		}
 	}
 }
 

@@ -4,22 +4,17 @@ import (
 	"os"
 	"strings"
 
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
 const version string = "0.2.0"
 
-// shellOutput is set when --shell-output is passed. In this mode the final
-// result is printed to stdout (with an optional EXEC: prefix for execute
-// actions) instead of going to the clipboard.
-var shellOutput bool
-
 func Run() {
 	args := os.Args[1:]
 
-	if os.Getenv("NO_COLOR") != "" {
-		noColor = true
-	}
+	noColor := os.Getenv("NO_COLOR") != ""
+	shellOutput := false
 	filtered := args[:0]
 	for _, a := range args {
 		if a == "--no-color" {
@@ -46,40 +41,47 @@ func Run() {
 		showFirstRunWelcome()
 	}
 
+	s, err := store.Load()
+	check(err)
+
 	if len(args) == 0 {
-		runSearch("", "")
+		runSearch(s, "", "", shellOutput)
 		return
 	}
 
 	switch args[0] {
 	case "add":
-		cmdAdd()
+		cmdAdd(s)
 	case "list", "ls":
-		cmdList(args[1:])
+		cmdList(s, args[1:], shellOutput)
 	case "rm", "remove":
-		cmdRemove(args[1:])
+		cmdRemove(s, args[1:])
 	case "edit":
-		cmdEdit(args[1:])
+		cmdEdit(s, args[1:])
 	case "stats":
-		cmdStats()
+		cmdStats(s)
 	case "completion":
 		cmdCompletion(args[1:])
 	case "shell":
 		cmdShell(args[1:])
+	case "mcp":
+		cmdMCP()
+	case "sync":
+		cmdSync(args[1:])
 	case "export":
-		cmdExport(args[1:])
+		cmdExport(s, args[1:])
 	case "import":
-		cmdImport(args[1:])
+		cmdImport(s, args[1:])
 	case "version", "-v", "--version":
 		showVersionBox()
 	case "help", "-h", "--help":
 		printHelp()
 	default:
 		if shellOutput {
-			runSearch("", strings.Join(args, " "))
+			runSearch(s, "", strings.Join(args, " "), shellOutput)
 		} else {
 			query := strings.Join(args[1:], " ")
-			runSearch(args[0], query)
+			runSearch(s, args[0], query, shellOutput)
 		}
 	}
 }

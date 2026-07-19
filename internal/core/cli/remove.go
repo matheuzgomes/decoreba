@@ -2,24 +2,23 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
-func cmdRemove(args []string) {
+func cmdRemove(s *core.Store, args []string) {
 	if len(args) == 0 {
 		fmt.Println("Usage: decoreba rm <id>")
 		return
 	}
 	idPrefix := args[0]
-	s, err := store.Load()
-	check(err)
 
 	matchIdx := -1
 	matchCount := 0
+	// linear scan for the index (FindByPrefix returns pointer, but we need index)
 	for i, c := range s.Commands {
-		if strings.HasPrefix(c.ID, idPrefix) {
+		if len(c.ID) >= len(idPrefix) && c.ID[:len(idPrefix)] == idPrefix {
 			matchIdx = i
 			matchCount++
 		}

@@ -10,3 +10,4 @@ func IsTerminal() bool             { return false }
 func MakeRaw() (func(), error)     { return nil, errUnsupportedTerm }
 func GetSize() (width, height int) { return 0, 0 }
 func InputAvailable(ms int) bool   { return false }
+func ReadInput(buf []byte) (int, error) { return 0, errUnsupportedTerm }

@@ -74,3 +74,19 @@ func InputAvailable(ms int) bool {
 	}
 	return fds.Bits[0]&1 != 0
 }
+
+// ReadInput reads from stdin and disambiguates a lone ESC byte from the
+// start of an escape sequence (arrow keys, etc.).
+func ReadInput(buf []byte) (int, error) {
+	n, err := os.Stdin.Read(buf)
+	if err != nil {
+		return n, err
+	}
+	if n == 1 && buf[0] == 0x1b && InputAvailable(25) {
+		m, err := os.Stdin.Read(buf[n:])
+		if err == nil {
+			n += m
+		}
+	}
+	return n, nil
+}

@@ -14,7 +14,7 @@ _decoreba_completion() {
     _init_completion || return
 
     if ((cword == 1)); then
-        COMPREPLY=($(compgen -W "add list ls rm remove edit stats version help completion" -- "$cur"))
+        COMPREPLY=($(compgen -W "add list ls rm remove edit stats shell sync mcp export import version help completion" -- "$cur"))
         return
     fi
 
@@ -24,6 +24,12 @@ _decoreba_completion() {
             ;;
         completion)
             COMPREPLY=($(compgen -W "bash zsh fish" -- "$cur"))
+            ;;
+        shell)
+            COMPREPLY=($(compgen -W "bash zsh" -- "$cur"))
+            ;;
+        sync)
+            COMPREPLY=($(compgen -W "init status push pull" -- "$cur"))
             ;;
     esac
 }
@@ -45,6 +51,11 @@ _decoreba() {
         'remove:Remove a command by id (alias)'
         'edit:Edit a command by id'
         'stats:Show vault statistics'
+        'shell:Print shell integration'
+        'sync:Sync commands via Gist'
+        'mcp:MCP server for AI agents'
+        'export:Export commands to stdout'
+        'import:Import commands from file'
         'version:Show version'
         'help:Show help'
         'completion:Generate shell completion'
@@ -62,6 +73,12 @@ _decoreba() {
                 completion)
                     _values 'shell' bash zsh fish
                     ;;
+                shell)
+                    _values 'shell' bash zsh
+                    ;;
+                sync)
+                    _values 'command' init status push pull
+                    ;;
             esac
             ;;
     esac
@@ -72,16 +89,21 @@ const completionFish = `# fish completion for decoreba
 # Install: decoreba completion fish > ~/.config/fish/completions/decoreba.fish
 
 complete -c decoreba -f
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'add' -d 'Add a new command'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'list' -d 'List contexts and commands'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'ls' -d 'List contexts and commands (alias)'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'rm' -d 'Remove a command by id'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'remove' -d 'Remove a command by id (alias)'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'edit' -d 'Edit a command by id'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'stats' -d 'Show vault statistics'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'version' -d 'Show version'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'help' -d 'Show help'
-complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats version help completion' -a 'completion' -d 'Generate shell completion'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'add' -d 'Add a new command'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'list' -d 'List contexts and commands'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'ls' -d 'List contexts and commands (alias)'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'rm' -d 'Remove a command by id'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'remove' -d 'Remove a command by id (alias)'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'edit' -d 'Edit a command by id'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'stats' -d 'Show vault statistics'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'shell' -d 'Print shell integration'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'sync' -d 'Sync commands via Gist'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'mcp' -d 'MCP server for AI agents'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'export' -d 'Export commands to stdout'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'import' -d 'Import commands from file'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'version' -d 'Show version'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'help' -d 'Show help'
+complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats shell sync mcp export import version help completion' -a 'completion' -d 'Generate shell completion'
 complete -c decoreba -n '__fish_seen_subcommand_from list ls; and test (count (commandline -opc)) -eq 2' -a '(decoreba list 2>/dev/null | string match -r "  - \w+" | string replace -r "  - " "")'
 `
 

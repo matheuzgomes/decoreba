@@ -15,10 +15,7 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
-func runSearch(context, query string) {
-	s, err := store.Load()
-	check(err)
-
+func runSearch(s *core.Store, context, query string, shellOutput bool) {
 	// Auto-detect context when none was specified.
 	if context == "" {
 		context = detectContext(s)
@@ -41,56 +38,15 @@ func runSearch(context, query string) {
 		}
 	}
 
-	chosen, action, err := tui.RunPalette(s, context, query)
+	chosen, action, err := tui.RunPalette(s, context, query, func(cmd *core.Command) {
+		_ = store.Save(s)
+	})
 	check(err)
 	if chosen == nil {
 		return
 	}
 
-	// Resolve variables before any further action.
-	if chosen.IsWorkflow() {
-		// Workflows don't support variables on the workflow itself.
-	} else if tui.HasVariables(chosen.Command) && action == tui.ActionCopy {
-		resolved, cancelled, err := tui.ResolveCommandInteractive(chosen.Command)
-		check(err)
-		if cancelled {
-			return
-		}
-		chosen.Command = resolved
-	}
-
-	// Workflows run their steps interactively.
-	if chosen.IsWorkflow() {
-		bumpUsage(s, chosen)
-		_ = tui.RunWorkflow(chosen)
-		return
-	}
-
-	switch action {
-	case tui.ActionEdit:
-		edited, err := tui.RunEditForm(s, chosen)
-		check(err)
-		if edited == nil {
-			return
-		}
-		replaceCommand(s, edited)
-		check(store.Save(s))
-		fmt.Printf("✓ Command updated in %q (id: %s)\n", edited.Context, edited.ID)
-	case tui.ActionExecute:
-		bumpUsage(s, chosen)
-		if shellOutput {
-			fmt.Print("EXEC:" + chosen.Command)
-		} else {
-			_ = tui.RunCommand(chosen)
-		}
-	default:
-		bumpUsage(s, chosen)
-		if shellOutput {
-			fmt.Print(chosen.Command)
-		} else {
-			confirmCopy(s, chosen)
-		}
-	}
+	handleActionResult(s, chosen, action, shellOutput)
 }
 
 func bumpUsage(s *core.Store, chosen *core.Command) {

@@ -5,13 +5,9 @@ import (
 	"time"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
-func cmdStats() {
-	s, err := store.Load()
-	check(err)
-
+func cmdStats(s *core.Store) {
 	if len(s.Commands) == 0 {
 		fmt.Println("No commands yet. Start with 'decoreba add'.")
 		return

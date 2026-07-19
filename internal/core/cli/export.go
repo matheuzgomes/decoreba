@@ -6,10 +6,9 @@ import (
 	"os"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
-func cmdExport(args []string) {
+func cmdExport(s *core.Store, args []string) {
 	full := false
 	output := ""
 	for _, a := range args {
@@ -20,10 +19,8 @@ func cmdExport(args []string) {
 		}
 	}
 
-	s, err := store.Load()
-	check(err)
-
 	var data []byte
+	var err error
 	if full {
 		data, err = json.MarshalIndent(s.Commands, "", "  ")
 	} else {

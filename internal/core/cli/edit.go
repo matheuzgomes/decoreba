@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/store"
@@ -10,16 +9,14 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
-func cmdEdit(args []string) {
+func cmdEdit(s *core.Store, args []string) {
 	if len(args) == 0 {
 		fmt.Println("Usage: decoreba edit <id>")
 		return
 	}
 	idPrefix := args[0]
-	s, err := store.Load()
-	check(err)
 
-	cmd, matchCount := findCommandByPrefix(s, idPrefix)
+	cmd, matchCount := s.FindByPrefix(idPrefix)
 	if matchCount == 0 {
 		fmt.Println("No command found with that id.")
 		return
@@ -44,20 +41,6 @@ func cmdEdit(args []string) {
 	replaceCommand(s, edited)
 	check(store.Save(s))
 	fmt.Printf("✓ Command updated in %q (id: %s)\n", edited.Context, edited.ID)
-}
-
-// findCommandByPrefix returns the unique command matching the id prefix and
-// the total number of matches.
-func findCommandByPrefix(s *core.Store, prefix string) (*core.Command, int) {
-	count := 0
-	var found *core.Command
-	for i := range s.Commands {
-		if strings.HasPrefix(s.Commands[i].ID, prefix) {
-			found = &s.Commands[i]
-			count++
-		}
-	}
-	return found, count
 }
 
 // replaceCommand replaces a command in the store (matched by ID) with the

@@ -40,15 +40,10 @@ func EditSteps(steps []core.WorkflowStep, width int, out io.Writer) ([]core.Work
 
 	buf := make([]byte, 64)
 	for {
-		n, err := os.Stdin.Read(buf)
+		n, err := term.ReadInput(buf)
 		if err != nil {
 			e.close()
 			return nil, false, err
-		}
-		if n == 1 && buf[0] == 0x1b && term.InputAvailable(25) {
-			if m, err := os.Stdin.Read(buf[1:]); err == nil {
-				n += m
-			}
 		}
 
 		done, cancelled := e.apply(parseKeys(buf[:n]))

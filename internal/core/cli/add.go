@@ -11,10 +11,7 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
-func cmdAdd() {
-	s, err := store.Load()
-	check(err)
-
+func cmdAdd(s *core.Store) {
 	if !term.IsTerminal() {
 		cmdAddFallback(s)
 		return

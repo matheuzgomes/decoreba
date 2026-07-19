@@ -9,7 +9,6 @@ import (
 
 	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/search"
-	"github.com/matheuzgomes/decoreba/internal/core/store"
 	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
@@ -42,6 +41,7 @@ type palette struct {
 	width        int
 	height       int
 	out          io.Writer
+	onPin        func(*core.Command)
 }
 
 // UseTTY forces the palette to write its UI to /dev/tty instead of stdout.
@@ -57,9 +57,13 @@ func (p *palette) writer() io.Writer {
 
 // RunPalette opens an interactive inline command palette. Returns the
 // selected command, the action the user chose (copy or edit), or nil when
-// the user cancels.
-func RunPalette(store *core.Store, context, initialQuery string) (*core.Command, PaletteAction, error) {
+// the user cancels. An optional onPin callback is called when the user
+// toggles pin state — the caller is responsible for persisting the change.
+func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*core.Command)) (*core.Command, PaletteAction, error) {
 	p := &palette{store: store, chip: context, action: ActionCopy, scrollOffset: 0}
+	if len(onPin) > 0 {
+		p.onPin = onPin[0]
+	}
 	if UseTTY {
 		f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err == nil {
@@ -84,17 +88,10 @@ func RunPalette(store *core.Store, context, initialQuery string) (*core.Command,
 
 	buf := make([]byte, 64)
 	for {
-		n, err := os.Stdin.Read(buf)
+		n, err := term.ReadInput(buf)
 		if err != nil {
 			p.close()
 			return nil, ActionCopy, err
-		}
-		// A lone ESC byte may be the Esc key or the start of an arrow
-		// sequence; if more bytes are already available, read them in.
-		if n == 1 && buf[0] == 0x1b && term.InputAvailable(25) {
-			if m, err := os.Stdin.Read(buf[1:]); err == nil {
-				n += m
-			}
 		}
 		done, chosen := p.apply(parseKeys(buf[:n]))
 		if done {
@@ -135,7 +132,9 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 					break
 				}
 			}
-			_ = store.Save(p.store)
+			if p.onPin != nil {
+				p.onPin(cmd)
+			}
 			p.refilter()
 		}
 	case keyUp:

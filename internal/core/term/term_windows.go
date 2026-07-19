@@ -102,3 +102,8 @@ func GetSize() (width, height int) {
 func InputAvailable(ms int) bool {
 	return false
 }
+
+// ReadInput reads from stdin (ESC disambiguation not supported on Windows).
+func ReadInput(buf []byte) (int, error) {
+	return os.Stdin.Read(buf)
+}

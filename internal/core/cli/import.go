@@ -11,7 +11,7 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
-func cmdImport(args []string) {
+func cmdImport(s *core.Store, args []string) {
 	input := ""
 	if len(args) > 0 {
 		input = args[0]
@@ -29,8 +29,6 @@ func cmdImport(args []string) {
 	// Try full format first ([]core.Command).
 	var full []core.Command
 	if err := json.Unmarshal(data, &full); err == nil {
-		s, err := store.Load()
-		check(err)
 		imported, skipped := mergeCommands(s, full)
 		check(store.Save(s))
 		fmt.Printf("Imported %d commands, skipped %d (already exist)\n", imported, skipped)
@@ -43,9 +41,6 @@ func cmdImport(args []string) {
 		fmt.Fprintln(os.Stderr, "Invalid format: expected a JSON array of commands.")
 		os.Exit(1)
 	}
-
-	s, err := store.Load()
-	check(err)
 
 	now := time.Now()
 	cmds := make([]core.Command, len(clean))

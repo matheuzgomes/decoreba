@@ -3,8 +3,9 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
+
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
 // logoArt is the original decoreba ASCII logo.
@@ -88,20 +89,10 @@ func rpt(s string, n int) string {
 
 // isFirstRun returns true when the config file does not exist yet.
 func isFirstRun() bool {
-	path, err := configPath()
+	dir, err := store.ConfigDir()
 	if err != nil {
 		return false
 	}
-	_, err = os.Stat(path)
+	_, err = os.Stat(dir + "/commands.json")
 	return os.IsNotExist(err)
-}
-
-// configPath mirrors store.ConfigPath without creating directories, for the
-// existence check only.
-func configPath() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "decoreba", "commands.json"), nil
 }

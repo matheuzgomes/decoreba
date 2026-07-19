@@ -3,7 +3,8 @@ package settings
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
+
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
 type Settings struct {
@@ -23,15 +24,14 @@ func Default() Settings {
 }
 
 func settingsPath() (string, error) {
-	dir, err := os.UserConfigDir()
+	dir, err := store.ConfigDir()
 	if err != nil {
 		return "", err
 	}
-	appDir := filepath.Join(dir, "decoreba")
-	if err := os.MkdirAll(appDir, 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
-	return filepath.Join(appDir, "settings.json"), nil
+	return dir + "/settings.json", nil
 }
 
 func Load() (Settings, error) {

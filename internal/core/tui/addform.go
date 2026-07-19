@@ -114,15 +114,10 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 
 	buf := make([]byte, 64)
 	for {
-		n, err := os.Stdin.Read(buf)
+		n, err := term.ReadInput(buf)
 		if err != nil {
 			f.close()
 			return nil, err
-		}
-		if n == 1 && buf[0] == 0x1b && term.InputAvailable(25) {
-			if m, err := os.Stdin.Read(buf[1:]); err == nil {
-				n += m
-			}
 		}
 		done, cmd := f.apply(parseKeys(buf[:n]))
 		if done {

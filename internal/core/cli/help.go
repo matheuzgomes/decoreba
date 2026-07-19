@@ -17,6 +17,8 @@ Usage:
   decoreba stats                Show vault statistics
   decoreba completion <shell>   Generate shell completion (bash|zsh|fish)
   decoreba shell <shell>        Print shell integration (bash|zsh)
+  decoreba mcp                  MCP server for AI agent integration
+  decoreba sync <sub>           Sync commands via Gist (init|status|push|pull)
   decoreba export [--full]      Export commands to stdout (or file)
   decoreba import [file]        Import commands from stdin (or file)
   decoreba version              Show version

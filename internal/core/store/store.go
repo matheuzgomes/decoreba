@@ -9,23 +9,30 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core"
 )
 
-func ConfigPath() (string, error) {
+// ConfigDir returns the config directory path without creating it.
+// Respects the DECOREBA_CONFIG environment variable.
+func ConfigDir() (string, error) {
 	if env := os.Getenv("DECOREBA_CONFIG"); env != "" {
-		dir := filepath.Dir(env)
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			return "", err
-		}
-		return env, nil
+		return filepath.Dir(env), nil
 	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	appDir := filepath.Join(dir, "decoreba")
-	if err := os.MkdirAll(appDir, 0o700); err != nil {
+	return filepath.Join(dir, "decoreba"), nil
+}
+
+// ConfigPath returns the full path to commands.json, creating the directory
+// if needed.
+func ConfigPath() (string, error) {
+	dir, err := ConfigDir()
+	if err != nil {
 		return "", err
 	}
-	return filepath.Join(appDir, "commands.json"), nil
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "commands.json"), nil
 }
 
 func StatPath(path string) (os.FileInfo, error) {
