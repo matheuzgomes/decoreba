@@ -63,6 +63,9 @@ func (f *addForm) fieldPrefixDisplay(idx int, runeEnd int) string {
 
 func (f *addForm) renderFieldContent(idx int) string {
 	label := fieldLabels[idx]
+	if idx == fieldCommand && f.isWorkflow {
+		label = "steps"
+	}
 	pad := labelPad - len([]rune(label))
 	if pad < 1 {
 		pad = 1
@@ -107,6 +110,10 @@ func (f *addForm) renderFieldContent(idx int) string {
 	}
 
 	val := f.fieldValueDisplay(idx)
+	if idx == fieldCommand && f.isWorkflow {
+		label = "steps"
+		val = fmt.Sprintf("%d steps (enter to edit)", len(f.workflowSteps))
+	}
 	if idx == fieldTags {
 		b.WriteString(truncateVisible(val, budget))
 		if focused {
@@ -130,6 +137,9 @@ func (f *addForm) renderFrame() []byte {
 		headerText = editCmdHeader
 	}
 	header := dotColor + "●" + ansiReset + " " + ansiDim + headerText + ansiReset
+	if f.isWorkflow {
+		header += " " + ansiAccent + "▶" + ansiReset + ansiDim + " workflow" + ansiReset
+	}
 	b.WriteByte('\n')
 	b.WriteString(renderBoxLine(f.width, header, ""))
 

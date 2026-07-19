@@ -47,6 +47,18 @@ func runSearch(context, query string) {
 		return
 	}
 
+	// Resolve variables before any further action.
+	if chosen.IsWorkflow() {
+		// Workflows don't support variables on the workflow itself.
+	} else if tui.HasVariables(chosen.Command) && action == tui.ActionCopy {
+		resolved, cancelled, err := tui.ResolveCommandInteractive(chosen.Command)
+		check(err)
+		if cancelled {
+			return
+		}
+		chosen.Command = resolved
+	}
+
 	// Workflows run their steps interactively.
 	if chosen.IsWorkflow() {
 		bumpUsage(s, chosen)
@@ -94,7 +106,7 @@ func bumpUsage(s *core.Store, chosen *core.Command) {
 
 func confirmCopy(s *core.Store, chosen *core.Command) {
 	if err := clipboard.Copy(chosen.Command); err != nil {
-		fmt.Printf("Could not copy automatically (%v).\nCommand: %s\n", err, chosen.Command)
+		fmt.Printf("%s\n(could not copy to clipboard: %v)\n", chosen.Command, err)
 	} else {
 		fmt.Printf("✓ Copied: %s\n", chosen.Command)
 	}

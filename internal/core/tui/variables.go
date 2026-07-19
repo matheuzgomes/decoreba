@@ -8,65 +8,66 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
-// hasVariables reports whether cmd contains at least one {{...}} placeholder.
-func hasVariables(cmd string) bool {
+// HasVariables reports whether cmd contains at least one {{...}} placeholder.
+func HasVariables(cmd string) bool {
 	return strings.Contains(cmd, "{{") && strings.Contains(cmd, "}}")
 }
 
-// resolveCommand prompts the user for each {{name:default}} variable in cmd
-// and returns the final command string with all placeholders replaced.
-// Returns the original command unchanged when there are no variables.
-func resolveCommand(cmd string) (resolved string, cancelled bool, err error) {
-	if !hasVariables(cmd) {
+// ResolveCommandInteractive prompts the user for each {{name:default}} variable
+// and returns the resolved command. Manages its own terminal raw mode.
+func ResolveCommandInteractive(cmd string) (resolved string, cancelled bool, err error) {
+	if !HasVariables(cmd) {
 		return cmd, false, nil
 	}
 
+	vars := parseVars(cmd)
+	if len(vars) == 0 {
+		return cmd, false, nil
+	}
+
+	restore, err := term.MakeRaw()
+	if err != nil {
+		return "", false, err
+	}
+	defer restore()
+
+	out := os.Stdout
+	if UseTTY {
+		if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
+			out = f
+			defer f.Close()
+		}
+	}
+
+	// Show a reference line so the user knows what they're filling in.
+	fmt.Fprintf(out, "\r\x1b[K%s %s\n", ansiDim+"cmd:"+ansiReset, cmd)
+
 	result := cmd
-	for {
-		start := strings.Index(result, "{{")
-		if start == -1 {
-			break
-		}
-		end := strings.Index(result[start:], "}}")
-		if end == -1 {
-			break
-		}
-		end += start
-
-		inner := result[start+2 : end]
-		name, def := inner, ""
-		if colon := strings.Index(inner, ":"); colon >= 0 {
-			name = inner[:colon]
-			def = inner[colon+1:]
-		}
-		name = strings.TrimSpace(name)
-
-		value, cancelled, err := promptVar(name, def)
+	for _, v := range vars {
+		value, cancelled, err := readVar(out, v.name, v.def)
 		if err != nil {
 			return "", false, err
 		}
 		if cancelled {
+			fmt.Fprint(out, "\r\x1b[K")
 			return "", true, nil
 		}
-
-		if value == "" && def == "" {
-			// No default and user left it empty: keep the placeholder literal.
-			value = "{{" + inner + "}}"
-		}
-		result = result[:start] + value + result[end+2:]
+		result = strings.Replace(result, "{{"+v.raw+"}}", value, 1)
 	}
+
+	// Clear the reference line.
+	fmt.Fprint(out, "\r\x1b[1A\x1b[K")
 	return result, false, nil
 }
 
-// promptVar shows a single-line prompt for a variable and reads the value
-// in raw mode. Returns the value, whether the user cancelled (Esc), and any
-// error.
-func promptVar(name, def string) (string, bool, error) {
+// readVar reads a single variable value from the terminal. Raw mode must be
+// active.
+func readVar(out *os.File, name, def string) (string, bool, error) {
 	prompt := name
 	if def != "" {
 		prompt += " [" + def + "]"
 	}
-	fmt.Printf("\r\033[K%s: ", prompt)
+	fmt.Fprintf(out, "\r\x1b[K%s: ", prompt)
 
 	var buf []rune
 	for {
@@ -85,29 +86,68 @@ func promptVar(name, def string) (string, bool, error) {
 			if value == "" && def != "" {
 				value = def
 			}
-			fmt.Print("\r\033[K")
+			if value == "" && def == "" {
+				value = "{{" + name + "}}"
+			}
+			fmt.Fprint(out, "\r\x1b[K")
 			return value, false, nil
 		case 0x1b:
-			// Check for arrow sequences — consume and ignore.
 			if term.InputAvailable(25) {
 				extra := make([]byte, 8)
 				os.Stdin.Read(extra)
 			}
-			fmt.Print("\r\033[K")
+			fmt.Fprint(out, "\r\x1b[K")
 			return "", true, nil
 		case 0x03:
-			fmt.Print("\r\033[K")
+			fmt.Fprint(out, "\r\x1b[K")
 			return "", true, nil
 		case 0x7f, 0x08:
 			if len(buf) > 0 {
 				buf = buf[:len(buf)-1]
-				fmt.Print("\b \b")
+				fmt.Fprint(out, "\b \b")
 			}
 		default:
 			if b[0] >= 0x20 {
 				buf = append(buf, rune(b[0]))
-				fmt.Print(string(b[0]))
+				fmt.Fprint(out, string(b[0]))
 			}
 		}
 	}
+}
+
+func parseVars(cmd string) []varInfo {
+	var vars []varInfo
+	s := cmd
+	for {
+		start := strings.Index(s, "{{")
+		if start == -1 {
+			break
+		}
+		end := strings.Index(s[start:], "}}")
+		if end == -1 {
+			break
+		}
+		end += start
+		inner := s[start+2 : end]
+		name, def := inner, ""
+		if colon := strings.Index(inner, ":"); colon >= 0 {
+			name = strings.TrimSpace(inner[:colon])
+			def = inner[colon+1:]
+		} else {
+			name = strings.TrimSpace(name)
+		}
+		vars = append(vars, varInfo{
+			name: name,
+			def:  def,
+			raw:  inner,
+		})
+		s = s[end+2:]
+	}
+	return vars
+}
+
+type varInfo struct {
+	name string
+	def  string
+	raw  string
 }

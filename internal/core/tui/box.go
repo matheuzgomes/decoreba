@@ -9,7 +9,7 @@ import (
 )
 
 // --- ANSI and box drawing constants ---
-const (
+var (
 	ansiReset   = "\x1b[0m"
 	ansiDim     = "\x1b[2m"
 	ansiBold    = "\x1b[1m"
@@ -19,6 +19,21 @@ const (
 	ansiFocusBg = "\x1b[48;5;236m"
 	ansiBorder  = "\x1b[38;5;240m"
 )
+
+// SetNoColor suppresses all ANSI escape codes when v is true.
+// Must be called before any rendering.
+func SetNoColor(v bool) {
+	if v {
+		ansiReset = ""
+		ansiDim = ""
+		ansiBold = ""
+		ansiAccent = ""
+		ansiSubtle = ""
+		ansiWarn = ""
+		ansiFocusBg = ""
+		ansiBorder = ""
+	}
+}
 
 const (
 	boxTL      = "╭"
@@ -37,8 +52,8 @@ func boxTotalWidth(termWidth int) int {
 	if termWidth < 40 {
 		return termWidth
 	}
-	if termWidth > 72 {
-		return 72
+	if termWidth > 96 {
+		return 96
 	}
 	return termWidth
 }

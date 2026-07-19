@@ -3,6 +3,8 @@ package cli
 import (
 	"os"
 	"strings"
+
+	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
 const version string = "0.1.0"
@@ -35,6 +37,10 @@ func Run() {
 		filtered = append(filtered, a)
 	}
 	args = filtered
+
+	if noColor {
+		tui.SetNoColor(true)
+	}
 
 	if isFirstRun() {
 		showFirstRunWelcome()

@@ -209,9 +209,22 @@ func TestAddFormValidationKeepsData(t *testing.T) {
 func TestAddFormCancel(t *testing.T) {
 	f := newTestAddForm()
 	f.fields[fieldContext] = []rune("x")
+	// First Esc: dirty form → confirm prompt, not cancelled.
 	done, cmd := f.apply([]keyEvent{{kind: keyEsc}})
+	if done || cmd != nil {
+		t.Fatalf("first esc with dirty form should not cancel: done=%v cmd=%v", done, cmd)
+	}
+	// Second Esc: confirms discard.
+	done, cmd = f.apply([]keyEvent{{kind: keyEsc}})
 	if !done || cmd != nil {
-		t.Fatalf("esc should cancel: done=%v cmd=%v", done, cmd)
+		t.Fatalf("second esc should cancel: done=%v cmd=%v", done, cmd)
+	}
+
+	// Clean form: Esc cancels immediately.
+	f2 := newTestAddForm()
+	done, cmd = f2.apply([]keyEvent{{kind: keyEsc}})
+	if !done || cmd != nil {
+		t.Fatalf("esc on clean form should cancel: done=%v cmd=%v", done, cmd)
 	}
 }
 

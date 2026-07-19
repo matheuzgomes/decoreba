@@ -99,16 +99,6 @@ func RunPalette(store *core.Store, context, initialQuery string) (*core.Command,
 		done, chosen := p.apply(parseKeys(buf[:n]))
 		if done {
 			p.close()
-			if chosen != nil && p.action == ActionCopy && hasVariables(chosen.Command) {
-				resolved, cancelled, err := resolveCommand(chosen.Command)
-				if err != nil {
-					return nil, ActionCopy, err
-				}
-				if cancelled {
-					return nil, ActionCopy, nil
-				}
-				chosen.Command = resolved
-			}
 			return chosen, p.action, nil
 		}
 		p.redraw()

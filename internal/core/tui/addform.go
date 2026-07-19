@@ -20,7 +20,7 @@ const (
 	fieldNotes   = 4
 	fieldCount   = 5
 
-	addFormHint  = "tab next   ⇧tab previous   ^s save   esc cancel"
+	addFormHint  = "tab next   ⇧tab previous   ^s save   ^w workflow   esc cancel"
 	newCmdHeader = "+ new command"
 	editCmdHeader = "edit command"
 	labelPad     = 9
@@ -35,21 +35,24 @@ var fieldLabels = [fieldCount]string{
 }
 
 type addForm struct {
-	store      *core.Store
-	fields     [fieldCount][]rune
-	focus      int
-	cursor     int
-	errField   int
-	errMsg     string
-	errFlash   int
-	contexts   []string
-	editing    bool
-	existing   *core.Command
-	lines      int
-	parkedLine int
-	width      int
-	height     int
-	out        io.Writer
+	store         *core.Store
+	fields        [fieldCount][]rune
+	focus         int
+	cursor        int
+	errField      int
+	errMsg        string
+	errFlash      int
+	contexts      []string
+	editing       bool
+	existing      *core.Command
+	isWorkflow    bool
+	workflowSteps []core.WorkflowStep
+	confirmExit   bool
+	lines         int
+	parkedLine    int
+	width         int
+	height        int
+	out           io.Writer
 }
 
 func (f *addForm) writer() io.Writer {
@@ -94,6 +97,10 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 		f.fields[fieldNotes] = []rune(existing.Notes)
 		f.focus = fieldContext
 		f.cursor = len(f.fields[fieldContext])
+		if existing.IsWorkflow() {
+			f.isWorkflow = true
+			f.workflowSteps = existing.Steps
+		}
 	}
 
 	restore, err := term.MakeRaw()
@@ -144,13 +151,34 @@ func (f *addForm) apply(events []keyEvent) (done bool, cmd *core.Command) {
 	for _, ev := range events {
 		switch ev.kind {
 		case keyEsc, keyCancel:
+			if f.isDirty() && !f.confirmExit {
+				f.confirmExit = true
+				f.errMsg = "Unsaved changes — Esc again to discard"
+				f.errField = -1
+				f.errFlash = 4
+				continue
+			}
 			return true, nil
 		case keySave:
 			if c, ok := f.trySave(); ok {
 				return true, c
 			}
+		case keyWorkflow:
+			f.isWorkflow = !f.isWorkflow
+			f.clearErrOnEdit()
 		case keyEnter:
-			if f.focus == fieldNotes {
+			if f.focus == fieldCommand && f.isWorkflow {
+				f.close()
+				steps, cancelled, err := EditSteps(f.workflowSteps, f.width, nil)
+				f.lines = 0
+				f.parkedLine = 0
+				if err != nil {
+					return true, nil
+				}
+				if !cancelled {
+					f.workflowSteps = steps
+				}
+			} else if f.focus == fieldNotes {
 				if c, ok := f.trySave(); ok {
 					return true, c
 				}
@@ -199,8 +227,45 @@ func (f *addForm) apply(events []keyEvent) (done bool, cmd *core.Command) {
 }
 
 func (f *addForm) clearErrOnEdit() {
+	f.clearConfirm()
 	if f.errField == f.focus {
 		f.errField = -1
+		f.errMsg = ""
+		f.errFlash = 0
+	}
+}
+
+// isDirty reports whether the form has unsaved changes.
+func (f *addForm) isDirty() bool {
+	if f.editing && f.existing != nil {
+		if string(f.fields[fieldContext]) != f.existing.Context {
+			return true
+		}
+		if string(f.fields[fieldTitle]) != f.existing.Title {
+			return true
+		}
+		if string(f.fields[fieldCommand]) != f.existing.Command {
+			return true
+		}
+		if string(f.fields[fieldTags]) != strings.Join(f.existing.Tags, ", ") {
+			return true
+		}
+		if string(f.fields[fieldNotes]) != f.existing.Notes {
+			return true
+		}
+		return false
+	}
+	for i := 0; i < fieldCount; i++ {
+		if len(f.fields[i]) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *addForm) clearConfirm() {
+	if f.confirmExit {
+		f.confirmExit = false
 		f.errMsg = ""
 		f.errFlash = 0
 	}
@@ -254,7 +319,7 @@ func (f *addForm) trySave() (*core.Command, bool) {
 		f.errFlash = 3
 		return nil, false
 	}
-	if cmdStr == "" {
+	if cmdStr == "" && !f.isWorkflow {
 		f.focus = fieldCommand
 		f.cursor = len(f.fields[fieldCommand])
 		f.errField = fieldCommand
@@ -291,11 +356,20 @@ func (f *addForm) trySave() (*core.Command, bool) {
 	} else {
 		cmd.ID = core.GenID()
 	}
+
+	if f.isWorkflow {
+		cmd.Steps = f.workflowSteps
+		cmd.Command = ""
+	}
 	return cmd, true
 }
 
 func (f *addForm) frameLines() int {
-	return 1 + 1 + fieldCount + 1 + 1
+	n := 1 + 1 + fieldCount + 1 + 1
+	if f.height > 0 && n > f.height {
+		n = f.height
+	}
+	return n
 }
 
 func (f *addForm) inputCol() int {
@@ -338,3 +412,5 @@ func (f *addForm) close() {
 	f.lines = 0
 	f.parkedLine = 0
 }
+
+
