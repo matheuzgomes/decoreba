@@ -19,6 +19,11 @@ func runSearch(context, query string) {
 	s, err := store.Load()
 	check(err)
 
+	// Auto-detect context when none was specified.
+	if context == "" {
+		context = detectContext(s)
+	}
+
 	if !term.IsTerminal() {
 		if shellOutput {
 			// stdout is captured by $(), but we can still use /dev/tty
@@ -39,6 +44,13 @@ func runSearch(context, query string) {
 	chosen, action, err := tui.RunPalette(s, context, query)
 	check(err)
 	if chosen == nil {
+		return
+	}
+
+	// Workflows run their steps interactively.
+	if chosen.IsWorkflow() {
+		bumpUsage(s, chosen)
+		_ = tui.RunWorkflow(chosen)
 		return
 	}
 
@@ -106,9 +118,9 @@ func runSearchFallback(s *core.Store, context, query string) {
 	}
 
 	if query == "" {
-		label := "Search> "
+		label := "› "
 		if context != "" {
-			label = fmt.Sprintf("Search in %s> ", context)
+			label = context + " › "
 		}
 		query = promptLine(label)
 	}

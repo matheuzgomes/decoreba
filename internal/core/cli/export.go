@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/store"
 )
 
@@ -35,6 +36,7 @@ func cmdExport(args []string) {
 				Tags:    c.Tags,
 				Notes:   c.Notes,
 				Pinned:  c.Pinned,
+				Steps:   c.Steps,
 			}
 		}
 		data, err = json.MarshalIndent(clean, "", "  ")
@@ -50,10 +52,11 @@ func cmdExport(args []string) {
 }
 
 type exportCmd struct {
-	Context string   `json:"context"`
-	Title   string   `json:"title"`
-	Command string   `json:"command"`
-	Tags    []string `json:"tags,omitempty"`
-	Notes   string   `json:"notes,omitempty"`
-	Pinned  bool     `json:"pinned,omitempty"`
+	Context string             `json:"context"`
+	Title   string             `json:"title"`
+	Command string             `json:"command"`
+	Tags    []string           `json:"tags,omitempty"`
+	Notes   string             `json:"notes,omitempty"`
+	Pinned  bool               `json:"pinned,omitempty"`
+	Steps   []core.WorkflowStep `json:"steps,omitempty"`
 }

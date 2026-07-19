@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -40,11 +41,25 @@ func (p *palette) renderFrame() []byte {
 			if r.Cmd.Pinned {
 				star = "★ "
 			}
+			if r.Cmd.IsWorkflow() {
+				star = "▶ " + star
+			}
+
+			// Title: for workflows, append the step count.
+			titleRaw := r.Cmd.Title
+			if r.Cmd.IsWorkflow() {
+				titleRaw += fmt.Sprintf(" (%d steps)", len(r.Cmd.Steps))
+			}
 			titleBudget := cw - len(num) - 1 - len([]rune(star))
-			title := truncate(r.Cmd.Title, titleBudget)
+			title := truncate(titleRaw, titleBudget)
 			var row strings.Builder
-			if r.Cmd.Pinned {
-				row.WriteString(ansiWarn + star + ansiReset)
+			if r.Cmd.Pinned || r.Cmd.IsWorkflow() {
+				if r.Cmd.IsWorkflow() {
+					row.WriteString(ansiAccent + "▶" + ansiReset + " ")
+				}
+				if r.Cmd.Pinned {
+					row.WriteString(ansiWarn + "★" + ansiReset + " ")
+				}
 			}
 			if p.scrollOffset+i == p.sel {
 				row.WriteString(ansiAccent + num + ansiReset + " " + ansiBold + title + ansiReset)
@@ -58,7 +73,17 @@ func (p *palette) renderFrame() []byte {
 			b.WriteByte('\n')
 			b.WriteString(renderBoxLine(p.width, row.String(), fill))
 
-			cmdRow := "  " + highlight(r.Cmd.Command, r.Pos, cw-2)
+			// Command line: for workflows, show a step preview.
+			var cmdRow string
+			if r.Cmd.IsWorkflow() {
+				preview := make([]string, len(r.Cmd.Steps))
+				for s, step := range r.Cmd.Steps {
+					preview[s] = step.Title
+				}
+				cmdRow = "  " + ansiDim + truncate(strings.Join(preview, " → "), cw-2) + ansiReset
+			} else {
+				cmdRow = "  " + highlight(r.Cmd.Command, r.Pos, cw-2)
+			}
 			b.WriteByte('\n')
 			b.WriteString(renderBoxLine(p.width, cmdRow, fill))
 		}

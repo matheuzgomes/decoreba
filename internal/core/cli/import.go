@@ -58,6 +58,7 @@ func cmdImport(args []string) {
 			Tags:      c.Tags,
 			Notes:     c.Notes,
 			Pinned:    c.Pinned,
+			Steps:     c.Steps,
 			CreatedAt: now,
 			UpdatedAt: now,
 		}

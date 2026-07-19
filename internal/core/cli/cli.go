@@ -70,7 +70,6 @@ func Run() {
 		printHelp()
 	default:
 		if shellOutput {
-			// Shell widget passes the current line as the query string.
 			runSearch("", strings.Join(args, " "))
 		} else {
 			query := strings.Join(args[1:], " ")

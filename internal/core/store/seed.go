@@ -20,6 +20,21 @@ func seedCommands() []core.Command {
 		}
 	}
 	return []core.Command{
+		{
+			ID:      core.GenID(),
+			Context: "git",
+			Title:   "Quick deploy to staging",
+			Command: "",
+			Tags:    []string{"deploy", "workflow"},
+			Pinned:  true,
+			Steps: []core.WorkflowStep{
+				{Title: "Run tests", Command: "go test ./..."},
+				{Title: "Build binary", Command: "go build -ldflags '-s -w' -o app ."},
+				{Title: "Push to staging", Command: "git push origin staging"},
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
 		mk("tmux", "Split pane horizontally", "tmux split-window -h", "pane", "split"),
 		mk("tmux", "Split pane vertically", "tmux split-window -v", "pane", "split"),
 		mk("tmux", "Create named session", "tmux new -s session_name", "session"),
