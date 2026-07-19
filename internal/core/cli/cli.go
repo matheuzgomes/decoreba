@@ -7,7 +7,7 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
-const version string = "0.1.0"
+const version string = "0.2.0"
 
 // shellOutput is set when --shell-output is passed. In this mode the final
 // result is printed to stdout (with an optional EXEC: prefix for execute

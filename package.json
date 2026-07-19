@@ -1,0 +1,27 @@
+{
+  "name": "decoreba",
+  "version": "0.2.0",
+  "description": "Personal command vault — inline terminal palette",
+  "bin": {
+    "decoreba": "./bin/decoreba.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "files": [
+    "bin/decoreba.js",
+    "scripts/install.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matheuzgomes/decoreba.git"
+  },
+  "keywords": [
+    "cli",
+    "terminal",
+    "commands",
+    "vault",
+    "productivity"
+  ],
+  "license": "MIT"
+}
