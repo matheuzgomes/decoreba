@@ -6,7 +6,7 @@
 
   <h1>decoreba</h1>
 
-  <p>Personal command vault — inline terminal palette. Zero dependencies.
+  <p>Inline finder for the commands you use every week and never quite memorize.
   ~2 ms startup. 3.7 MB binary.</p>
 
   <p>
