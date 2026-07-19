@@ -81,7 +81,7 @@ func runSearch(context, query string) {
 		if shellOutput {
 			fmt.Print("EXEC:" + chosen.Command)
 		} else {
-			confirmCopy(s, chosen)
+			_ = tui.RunCommand(chosen)
 		}
 	default:
 		bumpUsage(s, chosen)
