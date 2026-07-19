@@ -288,7 +288,7 @@ func (e *stepEditor) renderFrame() []byte {
 			}
 
 			titleBudget := cw - len(num) - 2
-			title := truncate(s.Title, titleBudget)
+			title := truncateVisible(s.Title, titleBudget)
 
 			var line string
 			if focused {
@@ -301,7 +301,7 @@ func (e *stepEditor) renderFrame() []byte {
 			b.WriteString(renderBoxLine(e.width, line, fill))
 
 			cmdBudget := cw - 2
-			cmdLine := "  " + ansiSubtle + truncate(s.Command, cmdBudget-2) + ansiReset
+			cmdLine := "  " + ansiSubtle + truncateVisible(s.Command, cmdBudget-2) + ansiReset
 			b.WriteByte('\n')
 			b.WriteString(renderBoxLine(e.width, cmdLine, fill))
 		}
@@ -330,7 +330,7 @@ func (e *stepEditor) renderFrame() []byte {
 
 			val := string(e.editBuf[fi])
 			fieldBudget := cw - labelPad
-			fieldLine += truncate(val, fieldBudget)
+			fieldLine += truncateVisible(val, fieldBudget)
 
 			b.WriteByte('\n')
 			fill := ""
@@ -343,9 +343,9 @@ func (e *stepEditor) renderFrame() []byte {
 
 	hint := ""
 	if e.editing {
-		hint = "tab next   ↵ save   esc cancel"
+		hint = "tab next  enter save  esc cancel"
 	} else {
-		hint = "^n add   ^d del   ^e edit   ↑↓ nav   enter done   esc cancel"
+		hint = "^n add  ^d del  ^e edit  ↑↓ nav  enter done  esc cancel"
 	}
 	b.WriteByte('\n')
 	b.WriteString(renderBoxLine(e.width, ansiDim+truncate(hint, cw)+ansiReset, ""))

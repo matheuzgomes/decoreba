@@ -3,3 +3,4 @@
 decoreba.exe
 *.tmp
 .DS_Store
+/docs/

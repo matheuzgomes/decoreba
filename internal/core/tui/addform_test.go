@@ -33,7 +33,7 @@ func TestAddFormRenderLayout(t *testing.T) {
 	if !strings.Contains(lines[0], boxTL) || !strings.Contains(lines[0], boxTR) {
 		t.Fatalf("top border: %q", lines[0])
 	}
-	if !strings.Contains(lines[1], "●") || !strings.Contains(lines[1], newCmdHeader) {
+	if !strings.Contains(lines[1], newCmdHeader) {
 		t.Fatalf("header: %q", lines[1])
 	}
 	if !strings.Contains(lines[1], boxV) {
@@ -317,16 +317,6 @@ func TestAddFormRedrawAndClose(t *testing.T) {
 	}
 	if f.lines != 0 {
 		t.Fatalf("lines after close = %d", f.lines)
-	}
-}
-
-func TestAddFormDotTakesContextColor(t *testing.T) {
-	f := newTestAddForm()
-	f.fields[fieldContext] = []rune("docker")
-	frame := string(f.renderFrame())
-	color := contextColor("docker")
-	if !strings.Contains(frame, color+"●"+ansiReset) {
-		t.Fatalf("dot should use context color %q in %q", color, frame)
 	}
 }
 

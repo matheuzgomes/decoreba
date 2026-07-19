@@ -20,7 +20,7 @@ const (
 	fieldNotes   = 4
 	fieldCount   = 5
 
-	addFormHint  = "tab next   ⇧tab previous   ^s save   ^w workflow   esc cancel"
+	addFormHint  = "tab next  ⇧tab previous  ^s save  ^w workflow  esc cancel"
 	newCmdHeader = "+ new command"
 	editCmdHeader = "edit command"
 	labelPad     = 9

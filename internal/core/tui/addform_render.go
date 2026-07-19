@@ -7,6 +7,9 @@ import (
 )
 
 func chipStyle(tag string) string {
+	if noColor {
+		return ""
+	}
 	h := 0
 	for _, r := range tag {
 		h = h*31 + int(r)
@@ -127,16 +130,13 @@ func (f *addForm) renderFieldContent(idx int) string {
 
 func (f *addForm) renderFrame() []byte {
 	var b bytes.Buffer
-	ctx := strings.TrimSpace(string(f.fields[fieldContext]))
-	dotColor := contextColor(ctx)
-
 	b.WriteString(renderBoxTop(f.width))
 
 	headerText := newCmdHeader
 	if f.editing {
 		headerText = editCmdHeader
 	}
-	header := dotColor + "●" + ansiReset + " " + ansiDim + headerText + ansiReset
+	header := ansiDim + headerText + ansiReset
 	if f.isWorkflow {
 		header += " " + ansiAccent + "▶" + ansiReset + ansiDim + " workflow" + ansiReset
 	}
