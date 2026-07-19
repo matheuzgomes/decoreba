@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="cmd/decoreba-desktop/appicon.png">
-    <img alt="decoreba" src="cmd/decoreba-desktop/appicon.png" width="120">
+    <source media="(prefers-color-scheme: dark)" srcset="cmd/decoreba-desktop/appicon-transparent.png">
+    <img alt="decoreba" src="cmd/decoreba-desktop/appicon-transparent.png" width="200" style="border: none; border-radius: 0; background: transparent; box-shadow: none;">
   </picture>
 
   <h1>decoreba</h1>
