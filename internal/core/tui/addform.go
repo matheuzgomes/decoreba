@@ -79,6 +79,13 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 		editing:  existing != nil,
 		existing: existing,
 	}
+	if UseTTY {
+		ff, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err == nil {
+			f.out = ff
+			defer ff.Close()
+		}
+	}
 	if existing != nil {
 		f.fields[fieldContext] = []rune(existing.Context)
 		f.fields[fieldTitle] = []rune(existing.Title)
@@ -280,6 +287,7 @@ func (f *addForm) trySave() (*core.Command, bool) {
 		cmd.CreatedAt = f.existing.CreatedAt
 		cmd.UsageCount = f.existing.UsageCount
 		cmd.LastUsedAt = f.existing.LastUsedAt
+		cmd.Pinned = f.existing.Pinned
 	} else {
 		cmd.ID = core.GenID()
 	}

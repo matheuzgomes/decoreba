@@ -66,7 +66,6 @@ _decoreba() {
             ;;
     esac
 }
-_decoreba "$@"
 `
 
 const completionFish = `# fish completion for decoreba

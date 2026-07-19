@@ -9,11 +9,12 @@ import (
 
 	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/search"
+	"github.com/matheuzgomes/decoreba/internal/core/store"
 	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 const (
-	paletteHint = "↵ copy   ↑↓ navigate   1-9 direct   ^e edit   esc cancel"
+	paletteHint = "↵ copy  ↑↓ nav  1-9 direct  ^e edit  ^x exec  ^s pin  esc cancel"
 	maxVisible  = 9
 )
 
@@ -21,8 +22,9 @@ const (
 type PaletteAction int
 
 const (
-	ActionCopy PaletteAction = iota
+	ActionCopy    PaletteAction = iota
 	ActionEdit
+	ActionExecute
 )
 
 type palette struct {
@@ -31,6 +33,7 @@ type palette struct {
 	query        []rune
 	pool         []core.Command
 	results      []search.Scored
+	suggestions  []string
 	sel          int
 	scrollOffset int
 	action       PaletteAction
@@ -40,6 +43,10 @@ type palette struct {
 	height       int
 	out          io.Writer
 }
+
+// UseTTY forces the palette to write its UI to /dev/tty instead of stdout.
+// Set this before RunPalette when stdout is captured (e.g. shell integration).
+var UseTTY bool
 
 func (p *palette) writer() io.Writer {
 	if p.out != nil {
@@ -53,6 +60,13 @@ func (p *palette) writer() io.Writer {
 // the user cancels.
 func RunPalette(store *core.Store, context, initialQuery string) (*core.Command, PaletteAction, error) {
 	p := &palette{store: store, chip: context, action: ActionCopy, scrollOffset: 0}
+	if UseTTY {
+		f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err == nil {
+			p.out = f
+			defer f.Close()
+		}
+	}
 	p.setPool()
 	if initialQuery != "" {
 		p.query = []rune(initialQuery)
@@ -85,6 +99,16 @@ func RunPalette(store *core.Store, context, initialQuery string) (*core.Command,
 		done, chosen := p.apply(parseKeys(buf[:n]))
 		if done {
 			p.close()
+			if chosen != nil && p.action == ActionCopy && hasVariables(chosen.Command) {
+				resolved, cancelled, err := resolveCommand(chosen.Command)
+				if err != nil {
+					return nil, ActionCopy, err
+				}
+				if cancelled {
+					return nil, ActionCopy, nil
+				}
+				chosen.Command = resolved
+			}
 			return chosen, p.action, nil
 		}
 		p.redraw()
@@ -106,7 +130,25 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 				p.action = ActionEdit
 				return true, &p.results[p.sel].Cmd
 			}
-		case keyUp:
+		case keyExecute:
+		if len(p.results) > 0 {
+			p.action = ActionExecute
+			return true, &p.results[p.sel].Cmd
+		}
+	case keySave:
+		if len(p.results) > 0 {
+			cmd := &p.results[p.sel].Cmd
+			cmd.Pinned = !cmd.Pinned
+			for i := range p.store.Commands {
+				if p.store.Commands[i].ID == cmd.ID {
+					p.store.Commands[i].Pinned = cmd.Pinned
+					break
+				}
+			}
+			_ = store.Save(p.store)
+			p.refilter()
+		}
+	case keyUp:
 			if p.sel > 0 {
 				p.sel--
 				if p.sel < p.scrollOffset {
@@ -161,6 +203,11 @@ func (p *palette) setPool() {
 func (p *palette) refilter() {
 	p.results = search.Sort(p.pool, string(p.query))
 	p.scrollOffset = 0
+	if len(p.results) == 0 && len(p.query) > 1 {
+		p.suggestions = search.Suggest(p.pool, string(p.query), 3)
+	} else {
+		p.suggestions = nil
+	}
 	if p.sel >= len(p.results) {
 		p.sel = len(p.results) - 1
 	}

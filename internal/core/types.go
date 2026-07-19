@@ -13,6 +13,7 @@ type Command struct {
 	Command    string    `json:"command"`
 	Tags       []string  `json:"tags,omitempty"`
 	Notes      string    `json:"notes,omitempty"`
+	Pinned     bool      `json:"pinned,omitempty"`
 	UsageCount int       `json:"usage_count"`
 	LastUsedAt time.Time `json:"last_used_at"`
 	CreatedAt  time.Time `json:"created_at"`

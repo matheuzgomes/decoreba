@@ -26,14 +26,26 @@ func (p *palette) renderFrame() []byte {
 
 	if len(p.results) == 0 {
 		b.WriteByte('\n')
-		b.WriteString(renderBoxLine(p.width, ansiDim+truncate("no results", cw)+ansiReset, ""))
+		if len(p.suggestions) > 0 {
+			hint := "Did you mean: " + strings.Join(p.suggestions, ", ")
+			b.WriteString(renderBoxLine(p.width, ansiDim+truncate(hint, cw)+ansiReset, ""))
+		} else {
+			b.WriteString(renderBoxLine(p.width, ansiDim+truncate("no results", cw)+ansiReset, ""))
+		}
 	} else {
 		for i := 0; i < p.visibleCount(); i++ {
 			r := p.results[p.scrollOffset+i]
 			num := strconv.Itoa(p.scrollOffset + i + 1)
-			titleBudget := cw - len(num) - 1
+			star := ""
+			if r.Cmd.Pinned {
+				star = "★ "
+			}
+			titleBudget := cw - len(num) - 1 - len([]rune(star))
 			title := truncate(r.Cmd.Title, titleBudget)
 			var row strings.Builder
+			if r.Cmd.Pinned {
+				row.WriteString(ansiWarn + star + ansiReset)
+			}
 			if p.scrollOffset+i == p.sel {
 				row.WriteString(ansiAccent + num + ansiReset + " " + ansiBold + title + ansiReset)
 			} else {

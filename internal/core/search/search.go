@@ -229,10 +229,53 @@ func Sort(pool []core.Command, query string) []Scored {
 		}
 	}
 	sort.SliceStable(results, func(i, j int) bool {
+		// Pinned commands always come first.
+		if results[i].Cmd.Pinned != results[j].Cmd.Pinned {
+			return results[i].Cmd.Pinned
+		}
 		if results[i].Score != results[j].Score {
 			return results[i].Score > results[j].Score
 		}
 		return results[i].Cmd.UsageCount > results[j].Cmd.UsageCount
 	})
 	return results
+}
+
+// Suggest returns the titles of up to n commands whose title is closest to
+// query by Damerau-Levenshtein distance. Used for "Did you mean?" when no
+// results are found.
+func Suggest(pool []core.Command, query string, n int) []string {
+	q := []rune(strings.ToLower(stripAccents(query)))
+	if len(q) <= 1 {
+		return nil
+	}
+
+	type pair struct {
+		title string
+		dist  int
+	}
+	var best []pair
+
+	for _, c := range pool {
+		t := []rune(strings.ToLower(stripAccents(c.Title)))
+		d := damerauLevenshtein(q, t)
+		if d > 4 {
+			continue
+		}
+		best = append(best, pair{c.Title, d})
+	}
+
+	sort.SliceStable(best, func(i, j int) bool {
+		return best[i].dist < best[j].dist
+	})
+
+	if len(best) > n {
+		best = best[:n]
+	}
+
+	result := make([]string, len(best))
+	for i, p := range best {
+		result[i] = p.title
+	}
+	return result
 }

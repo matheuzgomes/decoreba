@@ -7,10 +7,14 @@ import (
 
 const version string = "0.1.0"
 
+// shellOutput is set when --shell-output is passed. In this mode the final
+// result is printed to stdout (with an optional EXEC: prefix for execute
+// actions) instead of going to the clipboard.
+var shellOutput bool
+
 func Run() {
 	args := os.Args[1:]
 
-	// Respect the NO_COLOR convention and --no-color flag.
 	if os.Getenv("NO_COLOR") != "" {
 		noColor = true
 	}
@@ -18,6 +22,10 @@ func Run() {
 	for _, a := range args {
 		if a == "--no-color" {
 			noColor = true
+			continue
+		}
+		if a == "--shell-output" {
+			shellOutput = true
 			continue
 		}
 		if a == "--logo" {
@@ -28,7 +36,6 @@ func Run() {
 	}
 	args = filtered
 
-	// First-run: show the animated logo + welcome message.
 	if isFirstRun() {
 		showFirstRunWelcome()
 	}
@@ -51,12 +58,23 @@ func Run() {
 		cmdStats()
 	case "completion":
 		cmdCompletion(args[1:])
+	case "shell":
+		cmdShell(args[1:])
+	case "export":
+		cmdExport(args[1:])
+	case "import":
+		cmdImport(args[1:])
 	case "version", "-v", "--version":
 		showVersionBox()
 	case "help", "-h", "--help":
 		printHelp()
 	default:
-		query := strings.Join(args[1:], " ")
-		runSearch(args[0], query)
+		if shellOutput {
+			// Shell widget passes the current line as the query string.
+			runSearch("", strings.Join(args, " "))
+		} else {
+			query := strings.Join(args[1:], " ")
+			runSearch(args[0], query)
+		}
 	}
 }

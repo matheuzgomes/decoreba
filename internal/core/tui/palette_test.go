@@ -67,7 +67,7 @@ func TestRenderFrameLayout(t *testing.T) {
 	if !strings.Contains(lines[3], ansiSubtle) {
 		t.Fatalf("command line should use subtle color: %q", lines[3])
 	}
-	if !strings.Contains(lines[6], paletteHint) {
+	if !strings.Contains(lines[6], "↵ copy") {
 		t.Fatalf("hint line: %q", lines[6])
 	}
 	if !strings.Contains(lines[7], boxBL) || !strings.Contains(lines[7], boxBR) {

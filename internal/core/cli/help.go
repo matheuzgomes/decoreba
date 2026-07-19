@@ -16,6 +16,9 @@ Usage:
   decoreba edit <id>            Edit a command by id (or id prefix)
   decoreba stats                Show vault statistics
   decoreba completion <shell>   Generate shell completion (bash|zsh|fish)
+  decoreba shell <shell>        Print shell integration (bash|zsh)
+  decoreba export [--full]      Export commands to stdout (or file)
+  decoreba import [file]        Import commands from stdin (or file)
   decoreba version              Show version
   decoreba help                 Show this help
 

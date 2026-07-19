@@ -26,6 +26,8 @@ func TestParseKeys(t *testing.T) {
 		{"delete", "\x1b[3~", []keyEvent{k(keyDelete)}},
 		{"tab", "\t", []keyEvent{k(keyTab)}},
 		{"ctrl+e", "\x05", []keyEvent{k(keyEdit)}},
+		{"ctrl+x", "\x18", []keyEvent{k(keyExecute)}},
+		{"shift+enter csi u", "\x1b[13;2u", []keyEvent{k(keyExecute)}},
 		{"ctrl+s", "\x13", []keyEvent{k(keySave)}},
 		{"lone esc", "\x1b", []keyEvent{k(keyEsc)}},
 		{"printable ascii", "a", []keyEvent{r('a')}},

@@ -19,6 +19,7 @@ const (
 	keySave
 	keyCancel
 	keyEdit
+	keyExecute
 )
 
 type keyEvent struct {
@@ -32,6 +33,13 @@ func parseKeys(buf []byte) []keyEvent {
 		b := buf[i]
 		switch {
 		case b == 0x1b:
+			// CSI u: Shift+Enter → \x1b[13;2u
+			if i+5 < len(buf) && buf[i+1] == '[' && buf[i+2] == '1' && buf[i+3] == '3' && buf[i+4] == ';' && buf[i+5] == '2' && i+6 < len(buf) && buf[i+6] == 'u' {
+				events = append(events, keyEvent{kind: keyExecute})
+				i += 7
+				continue
+			}
+
 			if i+2 < len(buf) && (buf[i+1] == '[' || buf[i+1] == 'O') {
 				switch buf[i+2] {
 				case 'A':
@@ -77,6 +85,9 @@ func parseKeys(buf []byte) []keyEvent {
 			i++
 		case b == 0x05:
 			events = append(events, keyEvent{kind: keyEdit})
+			i++
+		case b == 0x18:
+			events = append(events, keyEvent{kind: keyExecute})
 			i++
 		case b == 0x09:
 			events = append(events, keyEvent{kind: keyTab})
