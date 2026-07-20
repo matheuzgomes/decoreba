@@ -2,11 +2,12 @@ package tui
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 )
 
-const listHint = "↵ select  ↑↓ nav  1-9 direct  esc cancel"
+const listHint = "enter select  ↑↓ nav  1-9 direct  esc cancel"
 
 func (b *listBrowser) renderFrame() []byte {
 	var buf bytes.Buffer
@@ -40,6 +41,13 @@ func (b *listBrowser) renderFrame() []byte {
 
 		buf.WriteByte('\n')
 		buf.WriteString(renderBoxLine(b.width, row.String(), fill))
+	}
+
+	remaining := len(b.entries) - b.scroll - visible
+	if remaining > 0 {
+		more := fmt.Sprintf("  … %d more", remaining)
+		buf.WriteByte('\n')
+		buf.WriteString(renderBoxLine(b.width, ansiDim+more+ansiReset, ""))
 	}
 
 	buf.WriteByte('\n')

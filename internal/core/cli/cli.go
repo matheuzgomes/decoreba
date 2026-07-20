@@ -60,6 +60,8 @@ func Run() {
 		cmdEdit(s, args[1:])
 	case "stats":
 		cmdStats(s)
+	case "init":
+		cmdInit(args[1:])
 	case "completion":
 		cmdCompletion(args[1:])
 	case "shell":

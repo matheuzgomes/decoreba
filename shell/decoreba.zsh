@@ -10,11 +10,11 @@
 __decoreba_widget() {
     local result
     result=$(decoreba --shell-output "$LBUFFER")
-    if [[ "$result" == EXEC:* ]]; then
+    if [[ "$result" == "EXEC:"* ]]; then
         LBUFFER="${result#EXEC:}"
         zle accept-line
     else
-        LBUFFER="${result}"
+        LBUFFER="${result#✓ }"
         zle reset-prompt
     fi
 }

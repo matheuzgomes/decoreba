@@ -30,8 +30,8 @@ func EditSteps(steps []core.WorkflowStep, width int, out io.Writer) ([]core.Work
 		steps: append([]core.WorkflowStep(nil), steps...),
 		focus: 0,
 		width: width,
-		out:   out,
 	}
+	e.frame = newFrame(out)
 	e.width, e.height = readTermSize()
 	if len(e.steps) == 0 {
 		e.focus = -1
@@ -59,15 +59,12 @@ func EditSteps(steps []core.WorkflowStep, width int, out io.Writer) ([]core.Work
 }
 
 type stepEditor struct {
-	steps      []core.WorkflowStep
-	focus      int
-	width      int
-	height     int
-	lines      int
-	parkedLine int
-	out        io.Writer
-
-	editing  bool
+	frame
+	steps   []core.WorkflowStep
+	focus   int
+	width   int
+	height  int
+	editing bool
 	editNew  bool
 	editStep int
 	editBuf  [stepFieldCount][]rune
@@ -232,37 +229,11 @@ func (e *stepEditor) inputCol() int {
 
 func (e *stepEditor) redraw() {
 	e.width, e.height = readTermSize()
-	var b bytes.Buffer
-
-	if e.lines > 0 && e.parkedLine > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", e.parkedLine)
-	}
-	b.WriteString("\r")
-	b.Write(e.renderFrame())
-	b.WriteString("\x1b[J")
-
-	newLines := e.frameLines()
-	up := newLines - 1 - e.inputLine()
-	if up > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", up)
-	}
-	b.WriteString("\r")
-	if col := e.inputCol(); col > 0 {
-		fmt.Fprintf(&b, "\x1b[%dC", col)
-	}
-
-	_, _ = e.out.Write(b.Bytes())
-	e.lines = newLines
-	e.parkedLine = e.inputLine()
+	e.draw(e.renderFrame(), e.inputLine(), e.inputCol())
 }
 
 func (e *stepEditor) close() {
-	if e.lines > 0 && e.parkedLine > 0 {
-		fmt.Fprintf(e.out, "\x1b[%dA", e.parkedLine)
-	}
-	_, _ = e.out.Write([]byte("\r\x1b[J"))
-	e.lines = 0
-	e.parkedLine = 0
+	e.dismiss()
 }
 
 func (e *stepEditor) renderFrame() []byte {
@@ -288,7 +259,7 @@ func (e *stepEditor) renderFrame() []byte {
 			}
 
 			titleBudget := cw - len(num) - 2
-			title := truncate(s.Title, titleBudget)
+			title := truncateVisible(s.Title, titleBudget)
 
 			var line string
 			if focused {
@@ -301,7 +272,7 @@ func (e *stepEditor) renderFrame() []byte {
 			b.WriteString(renderBoxLine(e.width, line, fill))
 
 			cmdBudget := cw - 2
-			cmdLine := "  " + ansiSubtle + truncate(s.Command, cmdBudget-2) + ansiReset
+			cmdLine := "  " + ansiSubtle + truncateVisible(s.Command, cmdBudget-2) + ansiReset
 			b.WriteByte('\n')
 			b.WriteString(renderBoxLine(e.width, cmdLine, fill))
 		}
@@ -330,7 +301,7 @@ func (e *stepEditor) renderFrame() []byte {
 
 			val := string(e.editBuf[fi])
 			fieldBudget := cw - labelPad
-			fieldLine += truncate(val, fieldBudget)
+			fieldLine += truncateVisible(val, fieldBudget)
 
 			b.WriteByte('\n')
 			fill := ""
@@ -343,9 +314,9 @@ func (e *stepEditor) renderFrame() []byte {
 
 	hint := ""
 	if e.editing {
-		hint = "tab next   ↵ save   esc cancel"
+		hint = "tab next  enter save  esc cancel"
 	} else {
-		hint = "^n add   ^d del   ^e edit   ↑↓ nav   enter done   esc cancel"
+		hint = "^n add  ^d del  ^e edit  ↑↓ nav  enter done  esc cancel"
 	}
 	b.WriteByte('\n')
 	b.WriteString(renderBoxLine(e.width, ansiDim+truncate(hint, cw)+ansiReset, ""))

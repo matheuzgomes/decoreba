@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 
@@ -27,6 +28,13 @@ func RunWorkflow(cmd *core.Command) error {
 		cmd:    cmd,
 		step:   0,
 		status: make([]rune, len(cmd.Steps)),
+		out:    os.Stdout,
+	}
+	if UseTTY {
+		if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
+			w.out = f
+			defer f.Close()
+		}
 	}
 	for i := range w.status {
 		w.status[i] = ' '
@@ -49,14 +57,32 @@ func RunWorkflow(cmd *core.Command) error {
 				w.clear()
 				return nil
 			case keyExecute:
-				w.clear()
-				for w.step < len(cmd.Steps) {
-					w.runCurrent()
+				if w.confirmExec {
+					w.clear()
+					for w.step < len(cmd.Steps) {
+						w.runCurrent()
+					}
+					return nil
 				}
-				return nil
+				w.confirmExec = true
+				w.draw()
+				handled = true
 			case keyEnter:
+				w.confirmExec = false
 				w.runCurrent()
 				handled = true
+			case keyRune:
+				if w.confirmExec {
+					if ev.r == 'y' || ev.r == 'Y' {
+						w.clear()
+						for w.step < len(cmd.Steps) {
+							w.runCurrent()
+						}
+						return nil
+					}
+					w.confirmExec = false
+					handled = true
+				}
 			}
 		}
 		if handled {
@@ -68,10 +94,12 @@ func RunWorkflow(cmd *core.Command) error {
 }
 
 type workflowRunner struct {
-	cmd    *core.Command
-	step   int
-	status []rune
-	lines  int
+	cmd         *core.Command
+	step        int
+	status      []rune
+	lines       int
+	confirmExec bool
+	out         io.Writer
 }
 
 func (w *workflowRunner) runCurrent() {
@@ -83,15 +111,28 @@ func (w *workflowRunner) runCurrent() {
 	fmt.Printf("%s %s...\r\n", ansiAccent+"→"+ansiReset, step.Title)
 
 	cmd := exec.Command("sh", "-c", step.Command)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	_ = cmd.Run()
+	if UseTTY {
+		tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err == nil {
+			cmd.Stdin = tty
+			cmd.Stdout = tty
+			cmd.Stderr = tty
+			defer tty.Close()
+		}
+	} else {
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	err := cmd.Run()
 
-	// Blank line to separate command output from the next frame.
 	fmt.Println()
 
-	w.status[w.step] = '✓'
+	if err != nil {
+		w.status[w.step] = '✗'
+	} else {
+		w.status[w.step] = '✓'
+	}
 	w.step++
 	if w.step < len(w.status) {
 		w.status[w.step] = '→'
@@ -146,7 +187,10 @@ func (w *workflowRunner) draw() {
 		b.WriteString(renderBoxLine(width, cmdLine, fill))
 	}
 
-	hint := "enter next   ^x run all   esc abort"
+	hint := "enter next  ^x run all  esc cancel"
+	if w.confirmExec {
+		hint = "Run all remaining steps?  y/yes  n/no"
+	}
 	b.WriteByte('\n')
 	b.WriteString(renderBoxLine(width, ansiDim+truncate(hint, cw)+ansiReset, ""))
 	b.WriteByte('\n')
@@ -158,16 +202,16 @@ func (w *workflowRunner) draw() {
 	}
 	b.WriteString("\r")
 
-	_, _ = os.Stdout.Write(b.Bytes())
+	_, _ = w.out.Write(b.Bytes())
 }
 
 func (w *workflowRunner) clear() {
 	if w.lines > 0 {
-		fmt.Fprintf(os.Stdout, "\x1b[%dB", w.lines-1)
+		fmt.Fprintf(w.out, "\x1b[%dB", w.lines-1)
 		for i := 0; i < w.lines; i++ {
-			fmt.Fprint(os.Stdout, "\r\x1b[2K")
+			fmt.Fprint(w.out, "\r\x1b[2K")
 			if i < w.lines-1 {
-				fmt.Fprint(os.Stdout, "\x1b[1A")
+				fmt.Fprint(w.out, "\x1b[1A")
 			}
 		}
 		w.lines = 0

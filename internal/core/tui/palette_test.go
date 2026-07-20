@@ -67,7 +67,7 @@ func TestRenderFrameLayout(t *testing.T) {
 	if !strings.Contains(lines[3], ansiSubtle) {
 		t.Fatalf("command line should use subtle color: %q", lines[3])
 	}
-	if !strings.Contains(lines[6], "↵ copy") {
+	if !strings.Contains(lines[6], "enter copy") {
 		t.Fatalf("hint line: %q", lines[6])
 	}
 	if !strings.Contains(lines[7], boxBL) || !strings.Contains(lines[7], boxBR) {
@@ -356,7 +356,7 @@ func TestRedrawAndCloseSequences(t *testing.T) {
 	p := newTestPalette()
 	p.setPool()
 	p.refilter()
-	p.out = &out
+	p.w = &out
 	p.width, p.height = readTermSize()
 
 	p.redraw()

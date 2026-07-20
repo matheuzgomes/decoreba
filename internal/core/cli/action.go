@@ -47,7 +47,7 @@ func handleActionResult(s *core.Store, chosen *core.Command, action tui.PaletteA
 	default:
 		bumpUsage(s, chosen)
 		if shellOutput {
-			fmt.Print(chosen.Command)
+			fmt.Print("✓ " + chosen.Command)
 		} else {
 			confirmCopy(s, chosen)
 		}

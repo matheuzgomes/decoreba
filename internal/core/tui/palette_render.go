@@ -34,7 +34,8 @@ func (p *palette) renderFrame() []byte {
 			b.WriteString(renderBoxLine(p.width, ansiDim+truncate("no results", cw)+ansiReset, ""))
 		}
 	} else {
-		for i := 0; i < p.visibleCount(); i++ {
+		vis := p.visibleCount()
+		for i := 0; i < vis; i++ {
 			r := p.results[p.scrollOffset+i]
 			num := strconv.Itoa(p.scrollOffset + i + 1)
 			star := ""
@@ -45,7 +46,6 @@ func (p *palette) renderFrame() []byte {
 				star = "▶ " + star
 			}
 
-			// Title: for workflows, append the step count.
 			titleRaw := r.Cmd.Title
 			if r.Cmd.IsWorkflow() {
 				titleRaw += fmt.Sprintf(" (%d steps)", len(r.Cmd.Steps))
@@ -73,7 +73,6 @@ func (p *palette) renderFrame() []byte {
 			b.WriteByte('\n')
 			b.WriteString(renderBoxLine(p.width, row.String(), fill))
 
-			// Command line: for workflows, show a step preview.
 			var cmdRow string
 			if r.Cmd.IsWorkflow() {
 				preview := make([]string, len(r.Cmd.Steps))
@@ -87,10 +86,20 @@ func (p *palette) renderFrame() []byte {
 			b.WriteByte('\n')
 			b.WriteString(renderBoxLine(p.width, cmdRow, fill))
 		}
-	}
 
+		remaining := len(p.results) - p.scrollOffset - vis
+		if remaining > 0 {
+			more := fmt.Sprintf("  … %d more", remaining)
+			b.WriteByte('\n')
+			b.WriteString(renderBoxLine(p.width, ansiDim+more+ansiReset, ""))
+		}
+	}
+	hint := paletteHint
+	if p.confirmExec {
+		hint = paletteExecHint
+	}
 	b.WriteByte('\n')
-	b.WriteString(renderBoxLine(p.width, ansiDim+truncate(paletteHint, cw)+ansiReset, ""))
+	b.WriteString(renderBoxLine(p.width, ansiDim+truncate(hint, cw)+ansiReset, ""))
 	b.WriteByte('\n')
 	b.WriteString(renderBoxBottom(p.width))
 	return b.Bytes()
@@ -117,7 +126,7 @@ func highlight(cmd string, pos []int, maxVisible int) string {
 			accent = false
 		}
 		b.WriteRune(r)
-		visible++
+		visible += runeWidth(r)
 	}
 	b.WriteString(ansiReset)
 	return b.String()

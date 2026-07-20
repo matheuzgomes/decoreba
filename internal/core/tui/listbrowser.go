@@ -1,9 +1,6 @@
 package tui
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"os"
 	"sort"
 
@@ -19,23 +16,14 @@ type contextEntry struct {
 const maxVisibleContexts = 20
 
 type listBrowser struct {
-	store      *core.Store
-	entries    []contextEntry
-	sel        int
-	scroll     int
-	lines      int
-	parkedLine int
-	width      int
-	height     int
-	out        io.Writer
-	onPin      func(*core.Command)
-}
-
-func (b *listBrowser) writer() io.Writer {
-	if b.out != nil {
-		return b.out
-	}
-	return os.Stdout
+	frame
+	store   *core.Store
+	entries []contextEntry
+	sel     int
+	scroll  int
+	width   int
+	height  int
+	onPin   func(*core.Command)
 }
 
 func RunListBrowser(s *core.Store, onPin ...func(*core.Command)) (*core.Command, PaletteAction, error) {
@@ -62,6 +50,7 @@ func RunListBrowser(s *core.Store, onPin ...func(*core.Command)) (*core.Command,
 		store:   s,
 		entries: entries,
 	}
+	b.frame = newFrame(nil)
 	if len(onPin) > 0 {
 		b.onPin = onPin[0]
 	}
@@ -69,7 +58,7 @@ func RunListBrowser(s *core.Store, onPin ...func(*core.Command)) (*core.Command,
 	if UseTTY {
 		f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err == nil {
-			b.out = f
+			b.w = f
 			defer f.Close()
 		}
 	}
@@ -157,29 +146,9 @@ func (b *listBrowser) frameLines() int {
 
 func (b *listBrowser) redraw() {
 	b.width, b.height = readTermSize()
-	var buf bytes.Buffer
-	if b.lines > 0 && b.parkedLine > 0 {
-		fmt.Fprintf(&buf, "\x1b[%dA", b.parkedLine)
-	}
-	buf.WriteString("\r")
-	buf.Write(b.renderFrame())
-	buf.WriteString("\x1b[J")
-	newLines := b.frameLines()
-	up := newLines - 1
-	if up > 0 {
-		fmt.Fprintf(&buf, "\x1b[%dA", up)
-	}
-	buf.WriteString("\r")
-	_, _ = b.writer().Write(buf.Bytes())
-	b.lines = newLines
-	b.parkedLine = 1
+	b.draw(b.renderFrame(), 1)
 }
 
 func (b *listBrowser) close() {
-	if b.lines > 0 && b.parkedLine > 0 {
-		fmt.Fprintf(b.writer(), "\x1b[%dA", b.parkedLine)
-	}
-	_, _ = b.writer().Write([]byte("\r\x1b[J"))
-	b.lines = 0
-	b.parkedLine = 0
+	b.dismiss()
 }

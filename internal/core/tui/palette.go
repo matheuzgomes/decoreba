@@ -1,9 +1,6 @@
 package tui
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -13,8 +10,9 @@ import (
 )
 
 const (
-	paletteHint = "↵ copy  ↑↓ nav  1-9 direct  ^e edit  ^x exec  ^s pin  esc cancel"
-	maxVisible  = 9
+	paletteHint     = "enter copy  ↑↓ nav  1-9 direct  ^e edit  ^x exec  ^s pin  esc cancel"
+	paletteExecHint = "Run this command?  y/yes  n/no"
+	maxVisible      = 9
 )
 
 // PaletteAction describes what the user chose to do with the selected command.
@@ -27,6 +25,7 @@ const (
 )
 
 type palette struct {
+	frame
 	store        *core.Store
 	chip         string
 	query        []rune
@@ -36,11 +35,9 @@ type palette struct {
 	sel          int
 	scrollOffset int
 	action       PaletteAction
-	lines        int
-	parkedLine   int
+	confirmExec  bool
 	width        int
 	height       int
-	out          io.Writer
 	onPin        func(*core.Command)
 }
 
@@ -48,26 +45,20 @@ type palette struct {
 // Set this before RunPalette when stdout is captured (e.g. shell integration).
 var UseTTY bool
 
-func (p *palette) writer() io.Writer {
-	if p.out != nil {
-		return p.out
-	}
-	return os.Stdout
-}
-
 // RunPalette opens an interactive inline command palette. Returns the
 // selected command, the action the user chose (copy or edit), or nil when
 // the user cancels. An optional onPin callback is called when the user
 // toggles pin state — the caller is responsible for persisting the change.
 func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*core.Command)) (*core.Command, PaletteAction, error) {
 	p := &palette{store: store, chip: context, action: ActionCopy, scrollOffset: 0}
+	p.frame = newFrame(nil)
 	if len(onPin) > 0 {
 		p.onPin = onPin[0]
 	}
 	if UseTTY {
 		f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err == nil {
-			p.out = f
+			p.w = f
 			defer f.Close()
 		}
 	}
@@ -84,6 +75,10 @@ func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*
 	defer restore()
 
 	p.width, p.height = readTermSize()
+	if p.height <= 3 {
+		_, _ = p.w.Write([]byte("\r\n" + ansiWarn + "Terminal too small for palette" + ansiReset + "\r\n"))
+		return nil, ActionCopy, nil
+	}
 	p.redraw()
 
 	buf := make([]byte, 64)
@@ -118,11 +113,15 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 				return true, &p.results[p.sel].Cmd
 			}
 		case keyExecute:
-		if len(p.results) > 0 {
-			p.action = ActionExecute
-			return true, &p.results[p.sel].Cmd
-		}
-	case keySave:
+			if len(p.results) > 0 {
+				if p.confirmExec {
+					p.action = ActionExecute
+					return true, &p.results[p.sel].Cmd
+				}
+				p.confirmExec = true
+				continue
+			}
+		case keySave:
 		if len(p.results) > 0 {
 			cmd := &p.results[p.sel].Cmd
 			cmd.Pinned = !cmd.Pinned
@@ -163,6 +162,14 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 				p.refilter()
 			}
 		case keyRune:
+			if p.confirmExec {
+				if ev.r == 'y' || ev.r == 'Y' {
+					p.action = ActionExecute
+					return true, &p.results[p.sel].Cmd
+				}
+				p.confirmExec = false
+				break
+			}
 			if len(p.query) == 0 && ev.r >= '1' && ev.r <= '9' {
 				if idx := int(ev.r - '1'); idx < p.visibleCount() {
 					p.action = ActionCopy
@@ -223,9 +230,17 @@ func (p *palette) visibleCount() int {
 func (p *palette) frameLines() int {
 	itemLines := 1
 	if len(p.results) > 0 {
-		itemLines = p.visibleCount() * 2
+		vis := p.visibleCount()
+		itemLines = vis * 2
+		if extra := len(p.results) - p.scrollOffset - vis; extra > 0 {
+			itemLines++
+		}
 	}
-	return 1 + 1 + itemLines + 1 + 1
+	n := 1 + 1 + itemLines + 1 + 1
+	if p.height > 0 && n > p.height {
+		n = p.height
+	}
+	return n
 }
 
 func (p *palette) inputCol() int {
@@ -240,32 +255,9 @@ func (p *palette) searchLine() int { return 1 }
 
 func (p *palette) redraw() {
 	p.width, p.height = readTermSize()
-	var b bytes.Buffer
-	if p.lines > 0 && p.parkedLine > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", p.parkedLine)
-	}
-	b.WriteString("\r")
-	b.Write(p.renderFrame())
-	b.WriteString("\x1b[J")
-	newLines := p.frameLines()
-	up := newLines - 1 - p.searchLine()
-	if up > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", up)
-	}
-	b.WriteString("\r")
-	if col := p.inputCol(); col > 0 {
-		fmt.Fprintf(&b, "\x1b[%dC", col)
-	}
-	_, _ = p.writer().Write(b.Bytes())
-	p.lines = newLines
-	p.parkedLine = p.searchLine()
+	p.draw(p.renderFrame(), p.searchLine(), p.inputCol())
 }
 
 func (p *palette) close() {
-	if p.lines > 0 && p.parkedLine > 0 {
-		fmt.Fprintf(p.writer(), "\x1b[%dA", p.parkedLine)
-	}
-	_, _ = p.writer().Write([]byte("\r\x1b[J"))
-	p.lines = 0
-	p.parkedLine = 0
+	p.dismiss()
 }

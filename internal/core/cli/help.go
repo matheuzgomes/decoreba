@@ -16,7 +16,9 @@ Usage:
   decoreba edit <id>            Edit a command by id (or id prefix)
   decoreba stats                Show vault statistics
   decoreba completion <shell>   Generate shell completion (bash|zsh|fish)
+  decoreba init [--yes]         Install widget + completions in rc file
   decoreba shell <shell>        Print shell integration (bash|zsh)
+  decoreba shell --install      Install widget in rc file
   decoreba mcp                  MCP server for AI agent integration
   decoreba sync <sub>           Sync commands via Gist (init|status|push|pull)
   decoreba export [--full]      Export commands to stdout (or file)

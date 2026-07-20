@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
@@ -52,7 +53,7 @@ func ResolveCommandInteractive(cmd string) (resolved string, cancelled bool, err
 			fmt.Fprint(out, "\r\x1b[K")
 			return "", true, nil
 		}
-		result = strings.Replace(result, "{{"+v.raw+"}}", value, 1)
+		result = strings.ReplaceAll(result, "{{"+v.raw+"}}", value)
 	}
 
 	// Clear the reference line.
@@ -70,18 +71,32 @@ func readVar(out *os.File, name, def string) (string, bool, error) {
 	fmt.Fprintf(out, "\r\x1b[K%s: ", prompt)
 
 	var buf []rune
+	var utfBuf [utf8.UTFMax]byte
+	var utfLen int
+
+	flushRune := func() {
+		if utfLen > 0 && utf8.FullRune(utfBuf[:utfLen]) {
+			r, _ := utf8.DecodeRune(utfBuf[:utfLen])
+			buf = append(buf, r)
+			fmt.Fprint(out, string(utfBuf[:utfLen]))
+		}
+		utfLen = 0
+	}
+
+	readBuf := make([]byte, 8)
 	for {
-		var b [1]byte
-		n, err := os.Stdin.Read(b[:])
+		n, err := term.ReadInput(readBuf)
 		if err != nil {
 			return "", false, err
 		}
 		if n == 0 {
 			continue
 		}
+		b := readBuf[0]
 
-		switch b[0] {
-		case '\r', '\n':
+		switch {
+		case b == '\r' || b == '\n':
+			flushRune()
 			value := string(buf)
 			if value == "" && def != "" {
 				value = def
@@ -91,25 +106,27 @@ func readVar(out *os.File, name, def string) (string, bool, error) {
 			}
 			fmt.Fprint(out, "\r\x1b[K")
 			return value, false, nil
-		case 0x1b:
-			if term.InputAvailable(25) {
-				extra := make([]byte, 8)
-				os.Stdin.Read(extra)
-			}
+		case b == 0x1b:
+			flushRune()
 			fmt.Fprint(out, "\r\x1b[K")
 			return "", true, nil
-		case 0x03:
+		case b == 0x03:
+			flushRune()
 			fmt.Fprint(out, "\r\x1b[K")
 			return "", true, nil
-		case 0x7f, 0x08:
+		case b == 0x7f || b == 0x08:
+			flushRune()
 			if len(buf) > 0 {
 				buf = buf[:len(buf)-1]
 				fmt.Fprint(out, "\b \b")
 			}
 		default:
-			if b[0] >= 0x20 {
-				buf = append(buf, rune(b[0]))
-				fmt.Fprint(out, string(b[0]))
+			if b >= 0x20 && utfLen < utf8.UTFMax {
+				utfBuf[utfLen] = b
+				utfLen++
+				if utf8.FullRune(utfBuf[:utfLen]) {
+					flushRune()
+				}
 			}
 		}
 	}

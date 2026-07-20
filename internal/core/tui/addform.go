@@ -1,9 +1,6 @@
 package tui
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -20,7 +17,7 @@ const (
 	fieldNotes   = 4
 	fieldCount   = 5
 
-	addFormHint  = "tab next   ⇧tab previous   ^s save   ^w workflow   esc cancel"
+	addFormHint  = "tab next  ⇧tab previous  ^s save  ^w workflow  esc cancel"
 	newCmdHeader = "+ new command"
 	editCmdHeader = "edit command"
 	labelPad     = 9
@@ -35,6 +32,7 @@ var fieldLabels = [fieldCount]string{
 }
 
 type addForm struct {
+	frame
 	store         *core.Store
 	fields        [fieldCount][]rune
 	focus         int
@@ -48,18 +46,8 @@ type addForm struct {
 	isWorkflow    bool
 	workflowSteps []core.WorkflowStep
 	confirmExit   bool
-	lines         int
-	parkedLine    int
 	width         int
 	height        int
-	out           io.Writer
-}
-
-func (f *addForm) writer() io.Writer {
-	if f.out != nil {
-		return f.out
-	}
-	return os.Stdout
 }
 
 // RunAddForm opens an interactive inline command-creation form. Returns the
@@ -82,10 +70,11 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 		editing:  existing != nil,
 		existing: existing,
 	}
+	f.frame = newFrame(nil)
 	if UseTTY {
 		ff, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err == nil {
-			f.out = ff
+			f.w = ff
 			defer ff.Close()
 		}
 	}
@@ -378,34 +367,11 @@ func (f *addForm) inputLine() int {
 
 func (f *addForm) redraw() {
 	f.width, f.height = readTermSize()
-	var b bytes.Buffer
-	if f.lines > 0 && f.parkedLine > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", f.parkedLine)
-	}
-	b.WriteString("\r")
-	b.Write(f.renderFrame())
-	b.WriteString("\x1b[J")
-	newLines := f.frameLines()
-	up := newLines - 1 - f.inputLine()
-	if up > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", up)
-	}
-	b.WriteString("\r")
-	if col := f.inputCol(); col > 0 {
-		fmt.Fprintf(&b, "\x1b[%dC", col)
-	}
-	_, _ = f.writer().Write(b.Bytes())
-	f.lines = newLines
-	f.parkedLine = f.inputLine()
+	f.draw(f.renderFrame(), f.inputLine(), f.inputCol())
 }
 
 func (f *addForm) close() {
-	if f.lines > 0 && f.parkedLine > 0 {
-		fmt.Fprintf(f.writer(), "\x1b[%dA", f.parkedLine)
-	}
-	_, _ = f.writer().Write([]byte("\r\x1b[J"))
-	f.lines = 0
-	f.parkedLine = 0
+	f.dismiss()
 }
 
 
