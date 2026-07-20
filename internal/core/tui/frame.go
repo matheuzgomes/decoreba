@@ -7,45 +7,51 @@ import (
 	"os"
 )
 
-// frame manages terminal cursor positioning for inline overlays. Every
-// overlay (palette, addform, step editor, list browser, workflow runner)
-// embeds frame and calls draw/dismiss instead of duplicating the redraw/
-// close pattern.
+// overlay manages terminal cursor positioning for inline overlays.
+// Every overlay component (palette, addform, list browser, step editor,
+// workflow runner) embeds overlay and delegates to refresh()/close().
 //
 // Usage:
 //
-//	f := newFrame(os.Stdout)
-//	for ... {
-//	    body := renderFrame()
-//	    f.draw(body, cursorLine, cursorCol)
+//	o.init(nil)
+//	for {
+//	    o.refresh(func(w, h int) ([]byte, int, int) {
+//	        return renderContent(), cursorLine, cursorCol
+//	    })
 //	    // read input, apply events...
 //	}
-//	f.dismiss()
-type frame struct {
+//	o.close()
+type overlay struct {
+	w          io.Writer
 	lines      int
 	parkedLine int
-	w          io.Writer
+	width      int
+	height     int
 }
 
-func newFrame(w io.Writer) frame {
+func (o *overlay) init(w io.Writer) {
 	if w == nil {
 		w = os.Stdout
 	}
-	return frame{w: w}
+	o.w = w
 }
 
-// draw renders the overlay body at the current terminal position. On the
-// first call, it draws from the current line. On subsequent calls, it
-// moves the cursor up by the previously parked distance so the frame
-// appears in-place — no scrollback pollution.
-//
-// cursorLine is the frame-relative line (0 = top) where the cursor should
-// land. cursorCol, when provided, positions the cursor horizontally on
-// that line. Use it for input fields; omit it for static overlays.
-func (f *frame) draw(body []byte, cursorLine int, cursorCol ...int) {
+// refresh redraws the overlay at the current terminal position.
+// render returns (body, cursorLine, cursorCol).
+// cursorCol of 0 means no horizontal cursor positioning.
+func (o *overlay) refresh(render func(int, int) ([]byte, int, int)) {
+	w, h := readTermSize()
+	o.width, o.height = w, h
+	body, cursorLine, cursorCol := render(w, h)
+	o.unsafeDraw(body, cursorLine, cursorCol)
+}
+
+// unsafeDraw writes body and repositions the cursor. It is the lowest-level
+// cursor math; prefer refresh().
+func (o *overlay) unsafeDraw(body []byte, cursorLine, cursorCol int) {
 	var b bytes.Buffer
-	if f.lines > 0 && f.parkedLine > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", f.parkedLine)
+	if o.lines > 0 && o.parkedLine > 0 {
+		fmt.Fprintf(&b, "\x1b[%dA", o.parkedLine)
 	}
 	b.WriteString("\r")
 	b.Write(body)
@@ -57,22 +63,21 @@ func (f *frame) draw(body []byte, cursorLine int, cursorCol ...int) {
 		fmt.Fprintf(&b, "\x1b[%dA", up)
 	}
 	b.WriteString("\r")
-	if len(cursorCol) > 0 && cursorCol[0] > 0 {
-		fmt.Fprintf(&b, "\x1b[%dC", cursorCol[0])
+	if cursorCol > 0 {
+		fmt.Fprintf(&b, "\x1b[%dC", cursorCol)
 	}
 
-	_, _ = f.w.Write(b.Bytes())
-	f.lines = newLines
-	f.parkedLine = cursorLine
+	_, _ = o.w.Write(b.Bytes())
+	o.lines = newLines
+	o.parkedLine = cursorLine
 }
 
-// dismiss clears the overlay from the terminal, returning the cursor to
-// the position it was at when the overlay first appeared.
-func (f *frame) dismiss() {
-	if f.lines > 0 && f.parkedLine > 0 {
-		fmt.Fprintf(f.w, "\x1b[%dA", f.parkedLine)
+// close dismisses the overlay from the terminal.
+func (o *overlay) close() {
+	if o.lines > 0 && o.parkedLine > 0 {
+		fmt.Fprintf(o.w, "\x1b[%dA", o.parkedLine)
 	}
-	_, _ = f.w.Write([]byte("\r\x1b[J"))
-	f.lines = 0
-	f.parkedLine = 0
+	_, _ = o.w.Write([]byte("\r\x1b[J"))
+	o.lines = 0
+	o.parkedLine = 0
 }

@@ -9,16 +9,17 @@ import (
 )
 
 func newTestAddForm() *addForm {
-	return &addForm{
+	f := &addForm{
 		store: &core.Store{Commands: []core.Command{
 			{ID: "1", Context: "docker", Title: "prune", Command: "docker container prune"},
 			{ID: "2", Context: "git", Title: "undo", Command: "git reset --soft HEAD~1"},
 		}},
 		errField: -1,
 		contexts: []string{"docker", "git"},
-		width:    80,
-		height:   24,
 	}
+	f.width = 80
+	f.height = 24
+	return f
 }
 
 func TestAddFormRenderLayout(t *testing.T) {

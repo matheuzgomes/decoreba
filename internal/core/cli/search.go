@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/clipboard"
 	"github.com/matheuzgomes/decoreba/internal/core/search"
 	"github.com/matheuzgomes/decoreba/internal/core/store"
 	"github.com/matheuzgomes/decoreba/internal/core/term"
@@ -49,40 +46,12 @@ func runSearch(s *core.Store, context, query string, shellOutput bool) {
 	handleActionResult(s, chosen, action, shellOutput)
 }
 
-func bumpUsage(s *core.Store, chosen *core.Command) {
-	for i := range s.Commands {
-		if s.Commands[i].ID == chosen.ID {
-			s.Commands[i].UsageCount++
-			s.Commands[i].LastUsedAt = time.Now()
-			break
-		}
-	}
-	_ = store.Save(s)
-}
-
-func confirmCopy(s *core.Store, chosen *core.Command) {
-	if err := clipboard.Copy(chosen.Command); err != nil {
-		fmt.Printf("%s\n(could not copy to clipboard: %v)\n", chosen.Command, err)
-	} else {
-		fmt.Printf("✓ Copied: %s\n", chosen.Command)
-	}
-}
-
 func runSearchFallback(s *core.Store, context, query string) {
-	var pool []core.Command
-	if context != "" {
-		for _, c := range s.Commands {
-			if strings.EqualFold(c.Context, context) {
-				pool = append(pool, c)
-			}
-		}
-		if len(pool) == 0 {
-			fmt.Printf("No commands in context %q yet.\n\n", context)
-			printContexts(s)
-			return
-		}
-	} else {
-		pool = s.Commands
+	pool := s.FilterByContext(context)
+	if context != "" && len(pool) == 0 {
+		fmt.Printf("No commands in context %q yet.\n\n", context)
+		printContexts(s)
+		return
 	}
 
 	if query == "" {

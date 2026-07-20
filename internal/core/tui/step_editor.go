@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
@@ -22,17 +21,12 @@ var stepFieldLabels = [stepFieldCount]string{"title", "command"}
 // EditSteps opens an inline overlay for editing workflow steps.
 // Uses the same redraw/close pattern as palette and addform.
 // Raw mode must already be active.
-func EditSteps(steps []core.WorkflowStep, width int, out io.Writer) ([]core.WorkflowStep, bool, error) {
-	if out == nil {
-		out = os.Stdout
-	}
+func EditSteps(steps []core.WorkflowStep, out io.Writer) ([]core.WorkflowStep, bool, error) {
 	e := &stepEditor{
 		steps: append([]core.WorkflowStep(nil), steps...),
 		focus: 0,
-		width: width,
 	}
-	e.frame = newFrame(out)
-	e.width, e.height = readTermSize()
+	e.overlay.init(out)
 	if len(e.steps) == 0 {
 		e.focus = -1
 	}
@@ -59,11 +53,9 @@ func EditSteps(steps []core.WorkflowStep, width int, out io.Writer) ([]core.Work
 }
 
 type stepEditor struct {
-	frame
+	overlay
 	steps   []core.WorkflowStep
 	focus   int
-	width   int
-	height  int
 	editing bool
 	editNew  bool
 	editStep int
@@ -227,13 +219,16 @@ func (e *stepEditor) inputCol() int {
 	return boxLeftPad + labelPad + len(e.editBuf[e.editFld])
 }
 
+func (e *stepEditor) renderContent(_, _ int) ([]byte, int, int) {
+	return e.renderFrame(), e.inputLine(), e.inputCol()
+}
+
 func (e *stepEditor) redraw() {
-	e.width, e.height = readTermSize()
-	e.draw(e.renderFrame(), e.inputLine(), e.inputCol())
+	e.refresh(e.renderContent)
 }
 
 func (e *stepEditor) close() {
-	e.dismiss()
+	e.overlay.close()
 }
 
 func (e *stepEditor) renderFrame() []byte {

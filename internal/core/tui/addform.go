@@ -32,7 +32,7 @@ var fieldLabels = [fieldCount]string{
 }
 
 type addForm struct {
-	frame
+	overlay
 	store         *core.Store
 	fields        [fieldCount][]rune
 	focus         int
@@ -46,8 +46,6 @@ type addForm struct {
 	isWorkflow    bool
 	workflowSteps []core.WorkflowStep
 	confirmExit   bool
-	width         int
-	height        int
 }
 
 // RunAddForm opens an interactive inline command-creation form. Returns the
@@ -70,7 +68,7 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 		editing:  existing != nil,
 		existing: existing,
 	}
-	f.frame = newFrame(nil)
+	f.overlay.init(nil)
 	if UseTTY {
 		ff, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err == nil {
@@ -150,13 +148,11 @@ func (f *addForm) apply(events []keyEvent) (done bool, cmd *core.Command) {
 		case keyWorkflow:
 			f.isWorkflow = !f.isWorkflow
 			f.clearErrOnEdit()
-		case keyEnter:
-			if f.focus == fieldCommand && f.isWorkflow {
-				f.close()
-				steps, cancelled, err := EditSteps(f.workflowSteps, f.width, nil)
-				f.lines = 0
-				f.parkedLine = 0
-				if err != nil {
+	case keyEnter:
+		if f.focus == fieldCommand && f.isWorkflow {
+			f.close()
+			steps, cancelled, err := EditSteps(f.workflowSteps, nil)
+			if err != nil {
 					return true, nil
 				}
 				if !cancelled {
@@ -365,13 +361,16 @@ func (f *addForm) inputLine() int {
 	return 2 + f.focus
 }
 
+func (f *addForm) renderContent(_, _ int) ([]byte, int, int) {
+	return f.renderFrame(), f.inputLine(), f.inputCol()
+}
+
 func (f *addForm) redraw() {
-	f.width, f.height = readTermSize()
-	f.draw(f.renderFrame(), f.inputLine(), f.inputCol())
+	f.refresh(f.renderContent)
 }
 
 func (f *addForm) close() {
-	f.dismiss()
+	f.overlay.close()
 }
 
 

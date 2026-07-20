@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
@@ -29,7 +28,7 @@ func cmdImport(s *core.Store, args []string) {
 	// Try full format first ([]core.Command).
 	var full []core.Command
 	if err := json.Unmarshal(data, &full); err == nil {
-		imported, skipped := mergeCommands(s, full)
+		imported, skipped := s.Merge(full)
 		check(store.Save(s))
 		fmt.Printf("Imported %d commands, skipped %d (already exist)\n", imported, skipped)
 		return
@@ -58,30 +57,7 @@ func cmdImport(s *core.Store, args []string) {
 			UpdatedAt: now,
 		}
 	}
-	imported, skipped := mergeCommands(s, cmds)
+	imported, skipped := s.Merge(cmds)
 	check(store.Save(s))
 	fmt.Printf("Imported %d commands, skipped %d (already exist)\n", imported, skipped)
-}
-
-// mergeCommands appends commands to the store, skipping duplicates (same
-// context+command, case-insensitive). Returns counts of imported and skipped.
-func mergeCommands(s *core.Store, incoming []core.Command) (imported, skipped int) {
-	seen := make(map[string]bool, len(s.Commands))
-	for _, c := range s.Commands {
-		seen[key(c)] = true
-	}
-	for _, c := range incoming {
-		if seen[key(c)] {
-			skipped++
-			continue
-		}
-		s.Commands = append(s.Commands, c)
-		seen[key(c)] = true
-		imported++
-	}
-	return
-}
-
-func key(c core.Command) string {
-	return strings.ToLower(c.Context) + "\x00" + strings.ToLower(c.Command)
 }

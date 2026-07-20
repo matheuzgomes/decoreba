@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/search"
@@ -26,7 +25,7 @@ const (
 )
 
 type palette struct {
-	frame
+	overlay
 	store        *core.Store
 	chip         string
 	query        []rune
@@ -37,8 +36,6 @@ type palette struct {
 	scrollOffset int
 	action       PaletteAction
 	confirmExec  bool
-	width        int
-	height       int
 	onPin        func(*core.Command)
 }
 
@@ -52,7 +49,7 @@ var UseTTY bool
 // toggles pin state — the caller is responsible for persisting the change.
 func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*core.Command)) (*core.Command, PaletteAction, error) {
 	p := &palette{store: store, chip: context, action: ActionCopy, scrollOffset: 0}
-	p.frame = newFrame(nil)
+	p.overlay.init(nil)
 	if len(onPin) > 0 {
 		p.onPin = onPin[0]
 	}
@@ -125,13 +122,7 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 		case keySave:
 		if len(p.results) > 0 {
 			cmd := &p.results[p.sel].Cmd
-			cmd.Pinned = !cmd.Pinned
-			for i := range p.store.Commands {
-				if p.store.Commands[i].ID == cmd.ID {
-					p.store.Commands[i].Pinned = cmd.Pinned
-					break
-				}
-			}
+			cmd.Pinned = p.store.TogglePin(cmd.ID)
 			if p.onPin != nil {
 				p.onPin(cmd)
 			}
@@ -185,16 +176,7 @@ func (p *palette) apply(events []keyEvent) (done bool, chosen *core.Command) {
 }
 
 func (p *palette) setPool() {
-	p.pool = nil
-	if p.chip == "" {
-		p.pool = p.store.Commands
-		return
-	}
-	for _, c := range p.store.Commands {
-		if strings.EqualFold(c.Context, p.chip) {
-			p.pool = append(p.pool, c)
-		}
-	}
+	p.pool = p.store.FilterByContext(p.chip)
 }
 
 func (p *palette) refilter() {
@@ -254,11 +236,14 @@ func (p *palette) inputCol() int {
 
 func (p *palette) searchLine() int { return 1 }
 
+func (p *palette) renderContent(_, _ int) ([]byte, int, int) {
+	return p.renderFrame(), p.searchLine(), p.inputCol()
+}
+
 func (p *palette) redraw() {
-	p.width, p.height = readTermSize()
-	p.draw(p.renderFrame(), p.searchLine(), p.inputCol())
+	p.refresh(p.renderContent)
 }
 
 func (p *palette) close() {
-	p.dismiss()
+	p.overlay.close()
 }

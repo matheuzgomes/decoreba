@@ -38,18 +38,7 @@ func cmdEdit(s *core.Store, args []string) {
 		return
 	}
 
-	replaceCommand(s, edited)
+	s.Replace(edited)
 	check(store.Save(s))
 	fmt.Printf("✓ Command updated in %q (id: %s)\n", edited.Context, edited.ID)
-}
-
-// replaceCommand replaces a command in the store (matched by ID) with the
-// edited version.
-func replaceCommand(s *core.Store, updated *core.Command) {
-	for i := range s.Commands {
-		if s.Commands[i].ID == updated.ID {
-			s.Commands[i] = *updated
-			return
-		}
-	}
 }

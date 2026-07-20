@@ -4,9 +4,23 @@ import (
 	"fmt"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
+	"github.com/matheuzgomes/decoreba/internal/core/clipboard"
 	"github.com/matheuzgomes/decoreba/internal/core/store"
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
+
+func bumpUsage(s *core.Store, chosen *core.Command) {
+	s.BumpUsage(chosen.ID)
+	_ = store.Save(s)
+}
+
+func confirmCopy(s *core.Store, chosen *core.Command) {
+	if err := clipboard.Copy(chosen.Command); err != nil {
+		fmt.Printf("%s\n(could not copy to clipboard: %v)\n", chosen.Command, err)
+	} else {
+		fmt.Printf("✓ Copied: %s\n", chosen.Command)
+	}
+}
 
 // handleActionResult processes the command returned by the TUI palette or
 // list browser: resolves variables, runs workflows, and dispatches to
@@ -34,7 +48,7 @@ func handleActionResult(s *core.Store, chosen *core.Command, action tui.PaletteA
 		if edited == nil {
 			return
 		}
-		replaceCommand(s, edited)
+		s.Replace(edited)
 		check(store.Save(s))
 		fmt.Printf("✓ Command updated in %q (id: %s)\n", edited.Context, edited.ID)
 	case tui.ActionExecute:

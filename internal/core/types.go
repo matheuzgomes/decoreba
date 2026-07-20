@@ -58,6 +58,100 @@ func (s *Store) FindByPrefix(prefix string) (*Command, int) {
 	return found, count
 }
 
+// Replace replaces the command with a matching ID. Returns false if not found.
+func (s *Store) Replace(cmd *Command) bool {
+	for i := range s.Commands {
+		if s.Commands[i].ID == cmd.ID {
+			s.Commands[i] = *cmd
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveByPrefix removes the uniquely-matching command by ID prefix.
+// Returns the removed command and the match count (0=not found, 1=success, >1=ambiguous).
+func (s *Store) RemoveByPrefix(prefix string) (*Command, int) {
+	idx := -1
+	count := 0
+	for i, c := range s.Commands {
+		if len(c.ID) >= len(prefix) && c.ID[:len(prefix)] == prefix {
+			idx = i
+			count++
+		}
+	}
+	if count != 1 {
+		return nil, count
+	}
+	removed := s.Commands[idx]
+	s.Commands = append(s.Commands[:idx], s.Commands[idx+1:]...)
+	return &removed, count
+}
+
+// BumpUsage increments the usage count and updates the last-used timestamp
+// for the command with the given ID.
+func (s *Store) BumpUsage(id string) {
+	for i := range s.Commands {
+		if s.Commands[i].ID == id {
+			s.Commands[i].UsageCount++
+			s.Commands[i].LastUsedAt = time.Now()
+			return
+		}
+	}
+}
+
+// TogglePin flips the pinned state for the command with the given ID.
+// Returns the new pinned state.
+func (s *Store) TogglePin(id string) bool {
+	for i := range s.Commands {
+		if s.Commands[i].ID == id {
+			s.Commands[i].Pinned = !s.Commands[i].Pinned
+			return s.Commands[i].Pinned
+		}
+	}
+	return false
+}
+
+// FilterByContext returns commands matching the given context
+// (case-insensitive). Returns all commands when context is empty.
+func (s *Store) FilterByContext(context string) []Command {
+	if context == "" {
+		return s.Commands
+	}
+	var filtered []Command
+	for _, c := range s.Commands {
+		if strings.EqualFold(c.Context, context) {
+			filtered = append(filtered, c)
+		}
+	}
+	return filtered
+}
+
+// storeKey builds a dedup key from a command's context and command text.
+func storeKey(c Command) string {
+	return strings.ToLower(c.Context) + "\x00" + strings.ToLower(c.Command)
+}
+
+// Merge appends commands, skipping duplicates (same context+command,
+// case-insensitive). Returns imported and skipped counts.
+func (s *Store) Merge(incoming []Command) (imported, skipped int) {
+	seen := make(map[string]bool, len(s.Commands))
+	for _, c := range s.Commands {
+		seen[storeKey(c)] = true
+	}
+	for _, c := range incoming {
+		k := storeKey(c)
+		if seen[k] {
+			skipped++
+			continue
+		}
+		s.Commands = append(s.Commands, c)
+		seen[k] = true
+		imported++
+	}
+	return
+}
+
 func GenID() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)

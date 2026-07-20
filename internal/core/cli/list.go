@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/store"
@@ -64,12 +63,7 @@ func printContexts(s *core.Store) {
 }
 
 func printContextCommands(s *core.Store, context string) {
-	var found []core.Command
-	for _, c := range s.Commands {
-		if strings.EqualFold(c.Context, context) {
-			found = append(found, c)
-		}
-	}
+	found := s.FilterByContext(context)
 	if len(found) == 0 {
 		fmt.Printf("No commands in context %q.\n", context)
 		return

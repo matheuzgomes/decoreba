@@ -20,16 +20,17 @@ func frameLines(t *testing.T, frame []byte) []string {
 }
 
 func newTestPalette() *palette {
-	return &palette{
+	p := &palette{
 		store: &core.Store{Commands: []core.Command{
 			{ID: "1", Context: "docker", Title: "Remove stopped containers", Command: "docker container prune"},
 			{ID: "2", Context: "docker", Title: "Follow container logs", Command: "docker logs -f nome_container"},
 			{ID: "3", Context: "git", Title: "Undo last commit", Command: "git reset --soft HEAD~1"},
 		}},
-		chip:   "docker",
-		width:  80,
-		height: 24,
+		chip: "docker",
 	}
+	p.width = 80
+	p.height = 24
+	return p
 }
 
 func TestRenderFrameLayout(t *testing.T) {

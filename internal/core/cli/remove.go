@@ -14,25 +14,15 @@ func cmdRemove(s *core.Store, args []string) {
 	}
 	idPrefix := args[0]
 
-	matchIdx := -1
-	matchCount := 0
-	// linear scan for the index (FindByPrefix returns pointer, but we need index)
-	for i, c := range s.Commands {
-		if len(c.ID) >= len(idPrefix) && c.ID[:len(idPrefix)] == idPrefix {
-			matchIdx = i
-			matchCount++
-		}
-	}
-	if matchCount == 0 {
+	removed, count := s.RemoveByPrefix(idPrefix)
+	switch {
+	case count == 0:
 		fmt.Println("No command found with that id.")
 		return
-	}
-	if matchCount > 1 {
+	case count > 1:
 		fmt.Println("Ambiguous id, use more characters.")
 		return
 	}
-	removed := s.Commands[matchIdx]
-	s.Commands = append(s.Commands[:matchIdx], s.Commands[matchIdx+1:]...)
 	check(store.Save(s))
 	fmt.Printf("✓ Removed: %s (%s)\n", removed.Title, removed.Context)
 }

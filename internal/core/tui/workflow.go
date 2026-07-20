@@ -3,7 +3,6 @@ package tui
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 
@@ -28,11 +27,11 @@ func RunWorkflow(cmd *core.Command) error {
 		cmd:    cmd,
 		step:   0,
 		status: make([]rune, len(cmd.Steps)),
-		out:    os.Stdout,
 	}
+	w.overlay.init(nil)
 	if UseTTY {
 		if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
-			w.out = f
+			w.w = f
 			defer f.Close()
 		}
 	}
@@ -40,13 +39,13 @@ func RunWorkflow(cmd *core.Command) error {
 		w.status[i] = ' '
 	}
 	w.status[0] = '→'
-	w.draw()
+	w.redraw()
 
 	buf := make([]byte, 64)
 	for w.step < len(cmd.Steps) {
 		n, err := term.ReadInput(buf)
 		if err != nil {
-			w.clear()
+			w.overlay.close()
 			return err
 		}
 
@@ -54,18 +53,18 @@ func RunWorkflow(cmd *core.Command) error {
 		for _, ev := range parseKeys(buf[:n]) {
 			switch ev.kind {
 			case keyEsc, keyCancel:
-				w.clear()
+				w.overlay.close()
 				return nil
 			case keyExecute:
 				if w.confirmExec {
-					w.clear()
+					w.overlay.close()
 					for w.step < len(cmd.Steps) {
 						w.runCurrent()
 					}
 					return nil
 				}
 				w.confirmExec = true
-				w.draw()
+				w.redraw()
 				handled = true
 			case keyEnter:
 				w.confirmExec = false
@@ -74,7 +73,7 @@ func RunWorkflow(cmd *core.Command) error {
 			case keyRune:
 				if w.confirmExec {
 					if ev.r == 'y' || ev.r == 'Y' {
-						w.clear()
+						w.overlay.close()
 						for w.step < len(cmd.Steps) {
 							w.runCurrent()
 						}
@@ -86,26 +85,25 @@ func RunWorkflow(cmd *core.Command) error {
 			}
 		}
 		if handled {
-			w.draw()
+			w.redraw()
 		}
 	}
-	w.clear()
+	w.overlay.close()
 	return nil
 }
 
 type workflowRunner struct {
+	overlay
 	cmd         *core.Command
 	step        int
 	status      []rune
-	lines       int
 	confirmExec bool
-	out         io.Writer
 }
 
 func (w *workflowRunner) runCurrent() {
 	step := w.cmd.Steps[w.step]
 	w.status[w.step] = '…'
-	w.clear()
+	w.overlay.close()
 
 	// Single running line — stays in scrollback as context.
 	fmt.Printf("%s %s...\r\n", ansiAccent+"→"+ansiReset, step.Title)
@@ -143,17 +141,14 @@ func (w *workflowRunner) frameLines() int {
 	return 2 + len(w.cmd.Steps)*2 + 2
 }
 
-func (w *workflowRunner) draw() {
-	w.lines = w.frameLines()
-	width, _ := readTermSize()
+func (w *workflowRunner) renderContent(wid, ht int) ([]byte, int, int) {
+	cw := boxContentWidth(wid)
 
 	var b bytes.Buffer
-	cw := boxContentWidth(width)
-
 	header := fmt.Sprintf("%s (%d/%d)", w.cmd.Title, w.step+1, len(w.cmd.Steps))
-	b.WriteString(renderBoxTop(width))
+	b.WriteString(renderBoxTop(wid))
 	b.WriteByte('\n')
-	b.WriteString(renderBoxLine(width, ansiBold+truncate(header, cw)+ansiReset, ""))
+	b.WriteString(renderBoxLine(wid, ansiBold+truncate(header, cw)+ansiReset, ""))
 
 	for i, step := range w.cmd.Steps {
 		indicator := " "
@@ -180,11 +175,11 @@ func (w *workflowRunner) draw() {
 
 		line := indicator + " " + text
 		b.WriteByte('\n')
-		b.WriteString(renderBoxLine(width, line, fill))
+		b.WriteString(renderBoxLine(wid, line, fill))
 
 		cmdLine := "  " + ansiSubtle + truncate(step.Command, cw-2) + ansiReset
 		b.WriteByte('\n')
-		b.WriteString(renderBoxLine(width, cmdLine, fill))
+		b.WriteString(renderBoxLine(wid, cmdLine, fill))
 	}
 
 	hint := "enter next  ^x run all  esc cancel"
@@ -192,28 +187,13 @@ func (w *workflowRunner) draw() {
 		hint = "Run all remaining steps?  y/yes  n/no"
 	}
 	b.WriteByte('\n')
-	b.WriteString(renderBoxLine(width, ansiDim+truncate(hint, cw)+ansiReset, ""))
+	b.WriteString(renderBoxLine(wid, ansiDim+truncate(hint, cw)+ansiReset, ""))
 	b.WriteByte('\n')
-	b.WriteString(renderBoxBottom(width))
+	b.WriteString(renderBoxBottom(wid))
 
-	up := w.lines - 1
-	if up > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA", up)
-	}
-	b.WriteString("\r")
-
-	_, _ = w.out.Write(b.Bytes())
+	return b.Bytes(), 1, 0
 }
 
-func (w *workflowRunner) clear() {
-	if w.lines > 0 {
-		fmt.Fprintf(w.out, "\x1b[%dB", w.lines-1)
-		for i := 0; i < w.lines; i++ {
-			fmt.Fprint(w.out, "\r\x1b[2K")
-			if i < w.lines-1 {
-				fmt.Fprint(w.out, "\x1b[1A")
-			}
-		}
-		w.lines = 0
-	}
+func (w *workflowRunner) redraw() {
+	w.refresh(w.renderContent)
 }

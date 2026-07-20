@@ -16,13 +16,11 @@ type contextEntry struct {
 const maxVisibleContexts = 20
 
 type listBrowser struct {
-	frame
+	overlay
 	store   *core.Store
 	entries []contextEntry
 	sel     int
 	scroll  int
-	width   int
-	height  int
 	onPin   func(*core.Command)
 }
 
@@ -50,7 +48,7 @@ func RunListBrowser(s *core.Store, onPin ...func(*core.Command)) (*core.Command,
 		store:   s,
 		entries: entries,
 	}
-	b.frame = newFrame(nil)
+	b.overlay.init(nil)
 	if len(onPin) > 0 {
 		b.onPin = onPin[0]
 	}
@@ -144,11 +142,14 @@ func (b *listBrowser) frameLines() int {
 	return 4 + b.visibleCount()
 }
 
+func (b *listBrowser) renderContent(_, _ int) ([]byte, int, int) {
+	return b.renderFrame(), 1, 0
+}
+
 func (b *listBrowser) redraw() {
-	b.width, b.height = readTermSize()
-	b.draw(b.renderFrame(), 1)
+	b.refresh(b.renderContent)
 }
 
 func (b *listBrowser) close() {
-	b.dismiss()
+	b.overlay.close()
 }
