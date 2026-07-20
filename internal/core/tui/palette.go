@@ -36,6 +36,8 @@ type palette struct {
 	scrollOffset int
 	action       PaletteAction
 	confirmExec  bool
+	lines        int
+	parkedLine   int
 	width        int
 	height       int
 	onPin        func(*core.Command)
@@ -76,7 +78,7 @@ func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*
 
 	p.width, p.height = readTermSize()
 	if p.height <= 3 {
-		_, _ = p.w.Write([]byte("\r\n" + ansiWarn + "Terminal too small for palette" + ansiReset + "\r\n"))
+		_, _ = p.writer().Write([]byte("\r\n" + ansiWarn + "Terminal too small for palette" + ansiReset + "\r\n"))
 		return nil, ActionCopy, nil
 	}
 	p.redraw()
