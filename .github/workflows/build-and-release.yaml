@@ -99,7 +99,7 @@ jobs:
           path: decoreba-desktop-*
 
   release:
-    needs: [cli, desktop]
+    needs: [cli]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
