@@ -36,10 +36,16 @@ that would make it more useful, open a PR or an issue.
 
 ## Install
 
-The simplest path is npm. It downloads a prebuilt binary for your platform:
+The simplest path is npm. I can add brew too later on:
 
 ```bash
 npm install -g decoreba
+```
+
+Check that the installation worked:
+
+```bash
+decoreba version
 ```
 
 Or install from source with Go:
@@ -48,8 +54,10 @@ Or install from source with Go:
 go install github.com/matheuzgomes/decoreba/cmd/decoreba@latest
 ```
 
-Supported release targets are Linux (amd64, arm64), macOS (amd64, arm64), and
-Windows (amd64).
+This path requires Go 1.25 or newer.
+
+The npm package provides releases for Linux (amd64, arm64), macOS (amd64,
+arm64), and Windows (amd64).
 
 ## Quick start
 
@@ -62,7 +70,7 @@ decoreba add
 Then search for it:
 
 ```bash
-decoreba                    # search all contexts
+decoreba                    # search the detected context, or all contexts
 decoreba docker              # search the docker context
 decoreba git undo            # search for "undo" in git
 ```
@@ -76,12 +84,13 @@ existing command line. Whatever you already typed becomes the search query;
 
 ## Why decoreba?
 
-Shell history answers: “What did I type?”
+Shell history answers: "What did I type?"
 
-Decoreba answers: “What is the command I keep needing?”
+Decoreba answers: "What is the command I keep needing?"
 
 Each entry has a context, title, command, tags, notes, and usage history. The
-context is usually the tool you are working with—`git`, `docker`, `kubectl`—and
+context is usually the tool you are working with, such as `git`, `docker`, or
+`kubectl`, and
 is detected from the directory when possible. Search covers the title,
 command, context, and tags, including accents and common typos.
 
@@ -123,10 +132,11 @@ Failed steps are shown in place, and `Esc` aborts the workflow.
 | `↑` / `Ctrl+K` | Move up |
 | `↓` / `Ctrl+J` | Move down |
 | `Enter` | Copy the selected command |
-| `1`–`9` | Select directly when the search is empty |
+| `1-9` | Select directly when the search is empty |
 | `Ctrl+X` | Execute after confirmation |
 | `Ctrl+E` | Edit the selected command |
 | `Ctrl+S` | Pin the selected command |
+| `Ctrl+W` | Edit workflow steps in the form |
 | `Esc` / `Ctrl+C` | Cancel |
 
 `Shift+Enter` executes on terminals that support the [kitty keyboard
@@ -135,18 +145,33 @@ WezTerm, and Ghostty. In other terminals it behaves like `Enter`.
 
 ### Shell integration
 
-Generate completions for bash, zsh, or fish:
+Generate completions for Bash or Zsh:
 
 ```bash
-eval "$(decoreba completion bash)"
+source <(decoreba completion bash)
 ```
 
-You can also install the widget and completions together:
+For Zsh:
+
+```zshAgo
+source <(decoreba completion zsh)
+```
+
+For Fish, write the completion script to Fish's completion directory:
+
+```fish
+decoreba completion fish > ~/.config/fish/completions/decoreba.fish
+```
+
+On Bash or Zsh, you can install the widget and completions together:
 
 ```bash
 decoreba init          # interactive
 decoreba init --yes    # non-interactive
 ```
+
+The `Ctrl+O` widget is supported in Bash and Zsh. Fish completions work, but
+Fish does not have this widget integration.
 
 The widget opens the palette with the text already on your command line:
 
@@ -194,7 +219,7 @@ Sync is an optional transport, not part of the core workflow.
 You do not need MCP to use decoreba. It is an optional way to expose the vault
 to AI agents over stdin/stdout using the [Model Context
 Protocol](https://modelcontextprotocol.io). I added it because it might be
-useful to people who already use agents with their terminal—not because
+useful to people who already use agents with their terminal, not because
 commands need an AI layer.
 
 If you want it:
@@ -204,9 +229,9 @@ decoreba mcp
 ```
 
 It supports searching, reading, adding, editing, removing, and executing
-commands. Write and delete operations require `confirm: true`; dangerous
-commands are blocked, and modifications are backed up first. If you do not
-use MCP, you can ignore this section.
+commands. Write and delete operations require `confirm: true`; some dangerous
+command patterns are blocked by default, and modifications are backed up first.
+If you do not use MCP, you can ignore this section.
 
 ## Data
 
@@ -223,6 +248,8 @@ Set `DECOREBA_CONFIG` to override the directory. `NO_COLOR` and
 
 ## Development
 
+Go 1.25 or newer and `make` are required for the source workflow.
+
 ```bash
 git clone https://github.com/matheuzgomes/decoreba
 cd decoreba
@@ -232,4 +259,4 @@ make build
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) · [Issues](https://github.com/matheuzgomes/decoreba/issues) · [Releases](https://github.com/matheuzgomes/decoreba/releases)
