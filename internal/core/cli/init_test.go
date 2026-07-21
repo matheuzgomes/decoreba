@@ -10,7 +10,8 @@ import (
 func TestRcFilePath(t *testing.T) {
 	t.Run("bash prefers .bashrc", func(t *testing.T) {
 		home := t.TempDir()
-		os.Setenv("HOME", home)
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		bashrc := filepath.Join(home, ".bashrc")
 		os.WriteFile(bashrc, []byte("# bash"), 0o644)
 		got := rcFilePath("bash")
@@ -21,7 +22,8 @@ func TestRcFilePath(t *testing.T) {
 
 	t.Run("bash falls back to .bash_profile", func(t *testing.T) {
 		home := t.TempDir()
-		os.Setenv("HOME", home)
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		got := rcFilePath("bash")
 		want := filepath.Join(home, ".bash_profile")
 		if got != want {
@@ -31,7 +33,8 @@ func TestRcFilePath(t *testing.T) {
 
 	t.Run("zsh", func(t *testing.T) {
 		home := t.TempDir()
-		os.Setenv("HOME", home)
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		got := rcFilePath("zsh")
 		want := filepath.Join(home, ".zshrc")
 		if got != want {
@@ -41,7 +44,8 @@ func TestRcFilePath(t *testing.T) {
 
 	t.Run("fish", func(t *testing.T) {
 		home := t.TempDir()
-		os.Setenv("HOME", home)
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		got := rcFilePath("fish")
 		want := filepath.Join(home, ".config", "fish", "config.fish")
 		if got != want {
@@ -50,7 +54,9 @@ func TestRcFilePath(t *testing.T) {
 	})
 
 	t.Run("unknown shell returns empty", func(t *testing.T) {
-		os.Setenv("HOME", t.TempDir())
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		if got := rcFilePath("python"); got != "" {
 			t.Fatalf("got %q", got)
 		}
@@ -81,7 +87,8 @@ func TestSourceCmd(t *testing.T) {
 
 	t.Run("uses tilde when relative to home", func(t *testing.T) {
 		home := t.TempDir()
-		os.Setenv("HOME", home)
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		rc := filepath.Join(home, ".zshrc")
 		os.WriteFile(rc, []byte("#"), 0o644)
 		got := sourceCmd("zsh", rc)
@@ -94,6 +101,7 @@ func TestSourceCmd(t *testing.T) {
 func TestCmdInitDryRun(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	os.Setenv("SHELL", "/bin/bash")
 
 	got := captureStdout(func() {
@@ -110,6 +118,7 @@ func TestCmdInitDryRun(t *testing.T) {
 func TestCmdInitYes(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	os.Setenv("SHELL", "/bin/zsh")
 
 	bashrc := filepath.Join(home, ".zshrc")
@@ -137,6 +146,7 @@ func TestCmdInitYes(t *testing.T) {
 func TestCmdInitYesUpdatesBlock(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	os.Setenv("SHELL", "/bin/bash")
 
 	bashrc := filepath.Join(home, ".bashrc")
@@ -163,6 +173,7 @@ func TestCmdInitYesUpdatesBlock(t *testing.T) {
 func TestCmdInitForceShell(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	// SHELL is fish but we force bash.
 	os.Setenv("SHELL", "/usr/bin/fish")
 

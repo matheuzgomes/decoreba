@@ -11,24 +11,24 @@ import (
 
 func TestConfigDir(t *testing.T) {
 	t.Run("env var", func(t *testing.T) {
-		t.Setenv("DECOREBA_CONFIG", "/tmp/decoreba/test/commands.json")
+		t.Setenv("DECOREBA_CONFIG", filepath.FromSlash("/tmp/decoreba/test/commands.json"))
 		dir, err := ConfigDir()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if dir != "/tmp/decoreba/test" {
-			t.Fatalf("ConfigDir = %q, want /tmp/decoreba/test", dir)
+		if dir != filepath.FromSlash("/tmp/decoreba/test") {
+			t.Fatalf("ConfigDir = %q, want %s", dir, filepath.FromSlash("/tmp/decoreba/test"))
 		}
 	})
 
 	t.Run("env var dir only", func(t *testing.T) {
-		t.Setenv("DECOREBA_CONFIG", "/custom/dir/")
+		t.Setenv("DECOREBA_CONFIG", filepath.FromSlash("/custom/dir/"))
 		dir, err := ConfigDir()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if dir != "/custom/dir" {
-			t.Fatalf("ConfigDir = %q, want /custom/dir", dir)
+		if dir != filepath.FromSlash("/custom/dir") {
+			t.Fatalf("ConfigDir = %q, want %s", dir, filepath.FromSlash("/custom/dir"))
 		}
 	})
 }
