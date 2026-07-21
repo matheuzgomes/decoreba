@@ -20,7 +20,7 @@
 </div>
 
 <div align="center">
-  <img alt="decoreba demo" src="docs/decoreba-search.gif" width="800">
+  <img alt="decoreba demo" src="assets/gifs/decoreba-search.gif" width="800">
 </div>
 
 ---
@@ -117,7 +117,7 @@ decoreba docker ps --shell-output   # prints "✓ docker ps" or "EXEC:docker ps"
 
 ### Add / Edit form
 
-<img alt="decoreba add" src="docs/decoreba-add.gif" width="600">
+<img alt="decoreba add" src="assets/gifs/decoreba-add.gif" width="600">
 
 Five fields: context, title, command, tags, notes. Context autocompletes from
 existing entries. Tags render as colored chips. `Ctrl+W` turns the command
@@ -130,7 +130,7 @@ into a multi-step workflow editor.
 Commands can have multiple steps. Each step is a title + command pair.
 
 <div>
-  <img alt="decoreba workflow" src="docs/decoreba-workflow.gif" width="700">
+  <img alt="decoreba workflow" src="assets/gifs/decoreba-workflow.gif" width="700">
 </div>
 
 `Enter` runs the next step. `Ctrl+X` runs all remaining (confirms first).
@@ -149,7 +149,7 @@ $ decoreba deploy
 ```
 
 <div>
-  <img alt="decoreba variables" src="docs/decoreba-variables.gif" width="700">
+  <img alt="decoreba variables" src="assets/gifs/decoreba-variables.gif" width="700">
 </div>
 
 ---
