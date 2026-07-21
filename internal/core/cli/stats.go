@@ -134,21 +134,23 @@ func timeAgo(t time.Time) string {
 	}
 
 	now := time.Now()
-	yesterday := now.AddDate(0, 0, -1)
 	switch {
 	case sameDay(t, now):
 		return "today"
-	case sameDay(t, yesterday):
-		return "yesterday"
 	}
 
 	days := int(d.Hours() / 24)
 	switch {
+	case days == 1:
+		return "yesterday"
 	case days < 7:
 		return fmt.Sprintf("%d days ago", days)
 	case days < 14:
 		return "last week"
 	case days < 30:
+		if days/7 == 1 {
+			return "1 week ago"
+		}
 		return fmt.Sprintf("%d weeks ago", days/7)
 	default:
 		return t.Format("Jan 2")
