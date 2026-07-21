@@ -29,6 +29,9 @@ func TestHandleActionResultShellOutputExecute(t *testing.T) {
 }
 
 func TestHandleActionResultShellOutputCopy(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("DECOREBA_CONFIG", filepath.Join(tmp, "commands.json"))
+
 	s := &core.Store{Commands: []core.Command{
 		{ID: "abc", UsageCount: 0, Title: "test", Command: "echo hi"},
 	}}
