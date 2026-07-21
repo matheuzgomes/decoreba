@@ -96,10 +96,13 @@ func TestBumpUsage(t *testing.T) {
 }
 
 func TestConfirmCopy(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("DECOREBA_CONFIG", filepath.Join(tmp, "commands.json"))
 	s := &core.Store{}
 	cmd := &core.Command{Command: "echo hello"}
-	// confirmCopy prints output and tries clipboard — just verify it doesn't panic.
-	confirmCopy(s, cmd)
+	_ = captureStdout(func() {
+		confirmCopy(s, cmd)
+	})
 }
 
 func TestHumanCount(t *testing.T) {
