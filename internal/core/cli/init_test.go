@@ -63,7 +63,7 @@ func TestRcFilePath(t *testing.T) {
 	})
 
 	t.Run("empty home returns empty", func(t *testing.T) {
-		os.Unsetenv("HOME")
+		t.Setenv("HOME", "")
 		// It'll try os.UserHomeDir which may fail, but there's always a
 		// home on CI; at least verify it doesn't panic.
 		_ = rcFilePath("bash")

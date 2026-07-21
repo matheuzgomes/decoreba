@@ -53,9 +53,9 @@ func TestIsFirstRun(t *testing.T) {
 		}
 	})
 	t.Run("error reading dir returns false", func(t *testing.T) {
-		os.Unsetenv("DECOREBA_CONFIG")
-		os.Unsetenv("HOME")
-		os.Unsetenv("XDG_CONFIG_HOME")
+		t.Setenv("DECOREBA_CONFIG", "")
+		t.Setenv("HOME", "")
+		t.Setenv("XDG_CONFIG_HOME", "")
 		if isFirstRun() {
 			t.Fatal("expected false when dir is invalid")
 		}
