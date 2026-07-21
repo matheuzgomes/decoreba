@@ -1,237 +1,216 @@
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="cmd/decoreba-desktop/appicon-transparent.png">
-    <img alt="decoreba" src="cmd/decoreba-desktop/appicon-transparent.png" width="500">
+    <img alt="decoreba" src="cmd/decoreba-desktop/appicon-transparent.png" width="320">
   </picture>
 
   # decoreba
 
-  Inline finder for the commands you use every day and never quite memorize.
+  A command vault for the commands you keep looking up.
 
   [![npm](https://img.shields.io/npm/v/decoreba?style=flat-square&logo=npm&label=npm)](https://www.npmjs.com/package/decoreba)
-  [![Go version](https://img.shields.io/github/go-mod/go-version/matheuzgomes/decoreba?style=flat-square&logo=go&label=Go)](https://go.dev)
   [![CI](https://img.shields.io/github/actions/workflow/status/matheuzgomes/decoreba/build-and-release.yaml?style=flat-square&label=CI)](https://github.com/matheuzgomes/decoreba/actions)
   [![MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-  <br>
-  ~2 ms startup · 6.2 MB binary · zero dependencies
 
-  [Features](#features) · [Install](#install) · [Quick start](#quick-start) · [Usage](#usage) · [Shell](#shell-integration) · [Sync](#gist-sync) · [MCP](#mcp-server)
-
+  [Install](#install) · [Quick start](#quick-start) · [Usage](#usage) · [Shell integration](#shell-integration)
 </div>
 
 <div align="center">
-  <img alt="decoreba demo" src="assets/gifs/decoreba-search.gif" width="800">
+  <img alt="decoreba search demo" src="assets/gifs/decoreba-search.gif" width="800">
 </div>
 
----
+You know the command. You have used it before. You just cannot remember the
+flag that makes it work.
 
-## Features
+`decoreba` keeps those commands in a small, searchable vault. Save a command
+with a title and some context, then find it from the terminal before you have
+to open a browser, scroll through shell history, or search your notes.
 
-- **Inline overlay** — Opens below the cursor, not as a fullscreen app. Dismiss without trace. Pure ANSI escape codes, no libraries.
-- **Fuzzy search + typo tolerance** — Damerau-Levenshtein distance catches typos. Accent normalization (`próximo` matches `proximo`).
-- **Recency ranking** — Score = fuzzy match + usage count + exponential decay (48h half-life). Pinned commands stay at top.
-- **Workflows** — Multi-step commands with interactive runner. Each step is a title + command pair. `Enter` steps forward, `Ctrl+X` runs all.
-- **Zero dependencies** — Pure Go standard library. No ncurses, no fzf, no daemon. Single 6.2 MB binary.
-- **MCP server** — Model Context Protocol over stdin/stdout. Lets AI agents search, add, edit, and execute from your vault.
+It is deliberately a vault, not a history searcher: you save commands first.
+If you want fuzzy search over everything you have already typed, [fzf](https://github.com/junegunn/fzf)
+is the better tool. I use both.
 
----
+I made decoreba because it is something I needed and wanted to build. It is
+free, and it will stay free. If you have an idea, a rough edge, or something
+that would make it more useful, open a PR or an issue.
 
 ## Install
+
+The simplest path is npm. It downloads a prebuilt binary for your platform:
 
 ```bash
 npm install -g decoreba
 ```
 
-Downloads a prebuilt binary for your platform. No Go toolchain needed.
+Or install from source with Go:
 
 ```bash
 go install github.com/matheuzgomes/decoreba/cmd/decoreba@latest
 ```
 
+Supported release targets are Linux (amd64, arm64), macOS (amd64, arm64), and
+Windows (amd64).
+
 ## Quick start
 
+Add something you keep forgetting:
+
 ```bash
-decoreba                    # auto-detect context from cwd
-decoreba git                # search within "git" context
-decoreba add                # add a command
-decoreba edit 0c9           # edit by id prefix
-decoreba stats              # vault statistics
+decoreba add
 ```
 
-See the full reference below.
+Then search for it:
 
----
+```bash
+decoreba                    # search all contexts
+decoreba docker              # search the docker context
+decoreba git undo            # search for "undo" in git
+```
+
+The palette opens below your prompt. Type to filter, press `Enter` to copy the
+selected command, or press `Ctrl+X` to execute it after confirmation.
+
+Once shell integration is enabled, `Ctrl+O` opens this same palette from your
+existing command line. Whatever you already typed becomes the search query;
+`Enter` puts the selected command back at the prompt.
+
+## Why decoreba?
+
+Shell history answers: “What did I type?”
+
+Decoreba answers: “What is the command I keep needing?”
+
+Each entry has a context, title, command, tags, notes, and usage history. The
+context is usually the tool you are working with—`git`, `docker`, `kubectl`—and
+is detected from the directory when possible. Search covers the title,
+command, context, and tags, including accents and common typos.
+
+The palette stays inline instead of taking over the terminal. It appears,
+helps, and goes away. No alternate screen to restore and no background daemon
+to keep running.
 
 ## Usage
 
-### Palette
+### Add a command
 
-The overlay appears below your prompt, not fullscreen. Type to fuzzy-search.
-`Enter` copies the command. `Ctrl+X` executes it.
+```bash
+decoreba add
+```
 
-> [!NOTE]
-> `Shift+Enter` also executes, but only in terminals that implement the
-> [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
-> (kitty, WezTerm, Ghostty). In most terminals `Shift+Enter` sends the same
-> byte as `Enter` and will copy instead.
+The form asks for a context, title, command, tags, and notes. Commands can use
+placeholders when part of the command changes each time:
 
-When results exceed the viewport, an overflow indicator appears (`… 3 more`).
-If the terminal is 3 rows or shorter, a graceful message is shown instead.
-`NO_COLOR` or `--no-color` disables all ANSI codes.
+```text
+docker logs --tail {{lines:100}} {{container}}
+```
+
+When you copy or execute it, decoreba asks for the values inline.
+
+<img alt="decoreba add command form" src="assets/gifs/decoreba-add.gif" width="600">
+
+### Run a workflow
+
+Turn a command into a sequence of titled steps with `Ctrl+W` in the form.
+Run one step at a time with `Enter`, or run the remaining steps with `Ctrl+X`.
+Failed steps are shown in place, and `Esc` aborts the workflow.
+
+<img alt="decoreba workflow runner" src="assets/gifs/decoreba-workflow.gif" width="700">
 
 ### Keybindings
 
-**Universal** (every terminal emulator)
-
 | Key | Action |
 |---|---|
-| `↑` / `Ctrl+K` | Navigate up |
-| `↓` / `Ctrl+J` | Navigate down |
-| `Enter` | Copy selected |
-| `1` – `9` | Direct select (empty search) |
-| `Ctrl+X` | Execute selected (press twice, or `y` to confirm) |
-| `Ctrl+E` | Edit selected |
-| `Ctrl+S` | Toggle pin |
-| `Backspace` (empty) | Remove context chip |
-| `Tab` / `Shift+Tab` | Next / previous field (form) |
+| `↑` / `Ctrl+K` | Move up |
+| `↓` / `Ctrl+J` | Move down |
+| `Enter` | Copy the selected command |
+| `1`–`9` | Select directly when the search is empty |
+| `Ctrl+X` | Execute after confirmation |
+| `Ctrl+E` | Edit the selected command |
+| `Ctrl+S` | Pin the selected command |
 | `Esc` / `Ctrl+C` | Cancel |
 
-**Kitty protocol only** (kitty, WezTerm, Ghostty)
+`Shift+Enter` executes on terminals that support the [kitty keyboard
+protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), including kitty,
+WezTerm, and Ghostty. In other terminals it behaves like `Enter`.
 
-| Key | Action |
-|---|---|
-| `Shift+Enter` | Execute selected |
+### Shell integration
 
-### Execute mode
-
-`Ctrl+X` triggers execution. A confirmation prompt appears:
-`Run this command? y/yes n/no`. Press `Ctrl+X` again or `y` to confirm.
-Any other key cancels.
-
-With `--shell-output`, the command text is printed to stdout instead of the
-clipboard. The shell widget (below) strips the prefix automatically:
+Generate completions for bash, zsh, or fish:
 
 ```bash
-decoreba docker ps --shell-output   # prints "✓ docker ps" or "EXEC:docker ps"
+eval "$(decoreba completion bash)"
 ```
 
-### Add / Edit form
-
-<img alt="decoreba add" src="assets/gifs/decoreba-add.gif" width="600">
-
-Five fields: context, title, command, tags, notes. Context autocompletes from
-existing entries. Tags render as colored chips. `Ctrl+W` turns the command
-into a multi-step workflow editor.
-
-`decoreba edit <id>` or `Ctrl+E` from the palette reopens the form pre-filled.
-
-### Workflows
-
-Commands can have multiple steps. Each step is a title + command pair.
-
-<div>
-  <img alt="decoreba workflow" src="assets/gifs/decoreba-workflow.gif" width="700">
-</div>
-
-`Enter` runs the next step. `Ctrl+X` runs all remaining (confirms first).
-`Esc` aborts. Failed steps show `✗`. Subprocess I/O routes through `/dev/tty`
-so interactive programs still work when piped.
-
-### Variables
-
-Use `{{placeholder}}` or `{{name:default}}` in any command. On copy or
-execute, decoreba prompts for each value inline:
-
-```text
-$ decoreba deploy
-
-  Container name: [web]
-```
-
-<div>
-  <img alt="decoreba variables" src="assets/gifs/decoreba-variables.gif" width="700">
-</div>
-
----
-
-## Shell integration
-
-### Completions
-
-Generate tab completions for subcommands, contexts, and sync actions:
+You can also install the widget and completions together:
 
 ```bash
-eval "$(decoreba completion bash)"   # or zsh / fish
+decoreba init          # interactive
+decoreba init --yes    # non-interactive
 ```
 
-### Ctrl+O widget
-
-Opens the palette pre-filled with whatever you typed. `Enter` inserts the
-command at the cursor. `Ctrl+X` executes (confirms first).
+The widget opens the palette with the text already on your command line:
 
 ```bash
 source <(decoreba shell bash)   # or zsh
 ```
 
-### Init
+Press `Ctrl+O` after typing part of a command. The text becomes the search
+query, so you can go from `docker p` to a saved command without starting over.
 
-Installs both widget and completions into your shell rc file in one step.
-Creates a backup before modifying.
 
-```bash
-decoreba init              # interactive
-decoreba init --yes        # non-interactive
-```
-
----
-
-## Gist sync
-
-Sync your vault across machines via a private GitHub Gist.
+## Other commands
 
 ```bash
-decoreba sync init          # create a new Gist and upload
-decoreba sync push          # upload local changes
-decoreba sync pull          # download remote changes
-decoreba sync status        # show ahead/behind/diverged/clean
+decoreba list                 # list contexts and command counts
+decoreba list docker          # list commands in a context
+decoreba edit <id>            # edit by id or id prefix
+decoreba rm <id>              # remove by id or id prefix
+decoreba stats                # show vault statistics
+decoreba export               # export commands to stdout
+decoreba import [file]         # import from stdin or a file
+decoreba help                 # show the full command list
 ```
 
-Requires `DECOREBA_GIST_TOKEN` (classic PAT with `gist` scope). Pass
-`--encrypt` to encrypt with AES-256-GCM before upload. The key is derived
-from the token.
+## Sync across machines
 
----
+The vault is one JSON file, but if you want decoreba to move changes through a
+private GitHub Gist:
 
-## MCP server
+```bash
+decoreba sync init
+decoreba sync push
+decoreba sync pull
+decoreba sync status
+```
 
-Runs a [Model Context Protocol](https://modelcontextprotocol.io) server over
-stdin/stdout. Lets AI agents (Claude Desktop, Cline, etc.) interact with
-your command vault directly.
+Sync needs `DECOREBA_GIST_TOKEN`, a classic GitHub token with the `gist` scope.
+Use `--encrypt` to encrypt the uploaded vault with AES-256-GCM.
+
+If copying a config file between machines is all you need, do that instead.
+Sync is an optional transport, not part of the core workflow.
+
+## MCP server (optional)
+
+You do not need MCP to use decoreba. It is an optional way to expose the vault
+to AI agents over stdin/stdout using the [Model Context
+Protocol](https://modelcontextprotocol.io). I added it because it might be
+useful to people who already use agents with their terminal—not because
+commands need an AI layer.
+
+If you want it:
 
 ```bash
 decoreba mcp
 ```
 
-| Tool | Action |
-|---|---|
-| `decoreba_search` | Fuzzy search across all contexts |
-| `decoreba_get` | Look up a command by ID |
-| `decoreba_list_contexts` | List all contexts with counts |
-| `decoreba_add` | Add a new command |
-| `decoreba_edit` | Update an existing command |
-| `decoreba_remove` | Delete by ID |
-| `decoreba_execute` | Run a command and return output |
-| `decoreba_stats` | Vault statistics |
-
-Write and delete tools require `confirm: true`. Dangerous commands
-(`rm -rf /`, `> /dev/sda`, etc.) are blocked by a built-in denylist.
-Auto-backup runs before every modification.
-
----
+It supports searching, reading, adding, editing, removing, and executing
+commands. Write and delete operations require `confirm: true`; dangerous
+commands are blocked, and modifications are backed up first. If you do not
+use MCP, you can ignore this section.
 
 ## Data
 
-Single JSON file. Atomic writes (save to `.tmp`, rename over target).
+Commands are stored in one `commands.json` file:
 
 | OS | Path |
 |---|---|
@@ -239,27 +218,18 @@ Single JSON file. Atomic writes (save to `.tmp`, rename over target).
 | macOS | `~/Library/Application Support/decoreba/commands.json` |
 | Windows | `%AppData%\decoreba\commands.json` |
 
-Override the directory with `$DECOREBA_CONFIG` (the filename is always
-`commands.json`).
+Set `DECOREBA_CONFIG` to override the directory. `NO_COLOR` and
+`--no-color` disable ANSI colors.
 
----
+## Development
 
-## Performance
+```bash
+git clone https://github.com/matheuzgomes/decoreba
+cd decoreba
+go test ./...
+make build
+```
 
-| Metric | Value |
-|---|---|
-| Binary | 6.2 MB (CLI, stripped with `-s -w`) |
-| Startup | ~2 ms |
-| RSS | ~7 MB |
-| Dependencies | zero (pure Go stdlib) |
-| Targets | linux amd64/arm64, macOS amd64/arm64, windows amd64 |
+## License
 
----
-
-## Design
-
-- **Appear, don't replace.** Inline overlay, not alternate screen. The terminal is exactly as it was before.
-- **Right answer before you finish typing.** Fuzzy + typo tolerance + recency + pinning.
-- **Keyboard-first.** Every action has a shortcut. The hint line teaches them progressively. No mouse.
-- **Context over categories.** Commands live under the tool they belong to. Auto-detection from cwd.
-- **Accessible.** `NO_COLOR` and `--no-color` disable all ANSI escape codes.
+[MIT](LICENSE)
