@@ -6,7 +6,6 @@ import (
 
 	"github.com/matheuzgomes/decoreba/internal/core"
 	"github.com/matheuzgomes/decoreba/internal/core/search"
-	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 const (
@@ -66,13 +65,13 @@ func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*
 	}
 	p.refilter()
 
-	restore, err := term.MakeRaw()
+	restore, err := makeRaw()
 	if err != nil {
 		return nil, ActionCopy, err
 	}
 	defer restore()
 
-	p.width, p.height = readTermSize()
+	p.width, p.height = readSize()
 	if p.height <= 3 {
 		_, _ = fmt.Fprint(p.w, "\r\n"+ansiWarn+"Terminal too small for palette"+ansiReset+"\r\n")
 		return nil, ActionCopy, nil
@@ -81,7 +80,7 @@ func RunPalette(store *core.Store, context, initialQuery string, onPin ...func(*
 
 	buf := make([]byte, 64)
 	for {
-		n, err := term.ReadInput(buf)
+		n, err := readInput(buf)
 		if err != nil {
 			p.close()
 			return nil, ActionCopy, err

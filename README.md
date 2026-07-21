@@ -1,42 +1,38 @@
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="cmd/decoreba-desktop/appicon-transparent.png">
-    <img alt="decoreba" src="cmd/decoreba-desktop/appicon-transparent.png" width="200" style="border: none; border-radius: 0; background: transparent; box-shadow: none;">
+    <img alt="decoreba" src="cmd/decoreba-desktop/appicon-transparent.png" width="500">
   </picture>
 
-  <h1>decoreba</h1>
+  # decoreba
 
-  <p>Inline finder for the commands you use every week and never quite memorize.
-  ~2 ms startup. 3.7 MB binary.</p>
+  Inline finder for the commands you use every day and never quite memorize.
 
-  <p>
-    <a href="https://www.npmjs.com/package/decoreba">
-      <img src="https://img.shields.io/npm/v/decoreba?label=npm" alt="npm">
-    </a>
-    <a href="https://github.com/matheuzgomes/decoreba">
-      <img src="https://img.shields.io/github/go-mod/go-version/matheuzgomes/decoreba" alt="Go version">
-    </a>
-    <a href="https://github.com/matheuzgomes/decoreba/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/matheuzgomes/decoreba/build-and-release.yaml?label=CI" alt="CI">
-    </a>
-    <a href="LICENSE">
-      <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
-    </a>
-  </p>
+  [![npm](https://img.shields.io/npm/v/decoreba?style=flat-square&logo=npm&label=npm)](https://www.npmjs.com/package/decoreba)
+  [![Go version](https://img.shields.io/github/go-mod/go-version/matheuzgomes/decoreba?style=flat-square&logo=go&label=Go)](https://go.dev)
+  [![CI](https://img.shields.io/github/actions/workflow/status/matheuzgomes/decoreba/build-and-release.yaml?style=flat-square&label=CI)](https://github.com/matheuzgomes/decoreba/actions)
+  [![MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+  <br>
+  ~2 ms startup · 6.2 MB binary · zero dependencies
+
+  [Features](#features) · [Install](#install) · [Quick start](#quick-start) · [Usage](#usage) · [Shell](#shell-integration) · [Sync](#gist-sync) · [MCP](#mcp-server)
+
+</div>
+
+<div align="center">
+  <img alt="decoreba demo" src="docs/decoreba-demo.png" width="1000">
 </div>
 
 ---
 
-```text
-$ decoreba git
+## Features
 
-  git › undo
-  1  Undo last commit keeping changes     ◂ git reset --soft HEAD~1
-  2  Temporarily ignore tracked changes   ◂ git update-index --assume-unchanged
-  3  Apply and drop most recent stash     ◂ git stash pop
-  4  Show all stashes                     ◂ git stash list
-↵ copy   ↑↓ nav   1-9 direct   ^e edit   ^x exec   ^s pin   esc cancel
-```
+- **Inline overlay** — Opens below the cursor, not as a fullscreen app. Dismiss without trace. Pure ANSI escape codes, no libraries.
+- **Fuzzy search + typo tolerance** — Damerau-Levenshtein distance catches typos. Accent normalization (`próximo` matches `proximo`).
+- **Recency ranking** — Score = fuzzy match + usage count + exponential decay (48h half-life). Pinned commands stay at top.
+- **Workflows** — Multi-step commands with interactive runner. Each step is a title + command pair. `Enter` steps forward, `Ctrl+X` runs all.
+- **Zero dependencies** — Pure Go standard library. No ncurses, no fzf, no daemon. Single 6.2 MB binary.
+- **MCP server** — Model Context Protocol over stdin/stdout. Lets AI agents search, add, edit, and execute from your vault.
 
 ---
 
@@ -46,91 +42,90 @@ $ decoreba git
 npm install -g decoreba
 ```
 
-Downloads a prebuilt static binary for your platform. No Go toolchain needed.
+Downloads a prebuilt binary for your platform. No Go toolchain needed.
 
 ```bash
 go install github.com/matheuzgomes/decoreba/cmd/decoreba@latest
 ```
 
-## Use
+## Quick start
 
 ```bash
-decoreba add                # add a command
-decoreba git                # search within "git" context
-decoreba git undo           # search with query pre-filled
 decoreba                    # auto-detect context from cwd
-decoreba ls                 # list contexts and counts
-decoreba ls docker          # list commands in "docker"
-decoreba rm 0c9             # remove by id prefix
+decoreba git                # search within "git" context
+decoreba add                # add a command
 decoreba edit 0c9           # edit by id prefix
 decoreba stats              # vault statistics
-decoreba export             # dump all commands as JSON
-decoreba import < file.json # merge from JSON
-decoreba --shell-output     # print result to stdout (pipeable)
 ```
+
+See the full reference below.
 
 ---
 
-## Inline palette
+## Usage
 
-The overlay appears below your cursor line, not as a fullscreen app. Pure ANSI
-escape codes — no libraries, no alternate screen. Dismiss it and the terminal
-is exactly as it was before.
+### Palette
 
-```text
-$ decoreba docker ps
+The overlay appears below your prompt, not fullscreen. Type to fuzzy-search.
+`Enter` copies the command. `Ctrl+X` executes it.
 
-  docker › ps
-  1  List all containers including stopped   ◂ docker ps -a
-  2  Clean up unused resources               ◂ docker system prune -af
-  3  Show resource usage per container       ◂ docker stats --no-stream
+> [!NOTE]
+> `Shift+Enter` also executes, but only in terminals that implement the
+> [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
+> (kitty, WezTerm, Ghostty). In most terminals `Shift+Enter` sends the same
+> byte as `Enter` and will copy instead.
+
+When results exceed the viewport, an overflow indicator appears (`… 3 more`).
+If the terminal is 3 rows or shorter, a graceful message is shown instead.
+`NO_COLOR` or `--no-color` disables all ANSI codes.
+
+### Keybindings
+
+**Universal** (every terminal emulator)
+
+| Key | Action |
+|---|---|
+| `↑` / `Ctrl+K` | Navigate up |
+| `↓` / `Ctrl+J` | Navigate down |
+| `Enter` | Copy selected |
+| `1` – `9` | Direct select (empty search) |
+| `Ctrl+X` | Execute selected (press twice, or `y` to confirm) |
+| `Ctrl+E` | Edit selected |
+| `Ctrl+S` | Toggle pin |
+| `Backspace` (empty) | Remove context chip |
+| `Tab` / `Shift+Tab` | Next / previous field (form) |
+| `Esc` / `Ctrl+C` | Cancel |
+
+**Kitty protocol only** (kitty, WezTerm, Ghostty)
+
+| Key | Action |
+|---|---|
+| `Shift+Enter` | Execute selected |
+
+### Execute mode
+
+`Ctrl+X` triggers execution. A confirmation prompt appears:
+`Run this command? y/yes n/no`. Press `Ctrl+X` again or `y` to confirm.
+Any other key cancels.
+
+With `--shell-output`, the command text is printed to stdout instead of the
+clipboard. The shell widget (below) strips the prefix automatically:
+
+```bash
+decoreba docker ps --shell-output   # prints "✓ docker ps" or "EXEC:docker ps"
 ```
 
-Press `Enter` to copy. `Shift+Enter` to execute.
+### Add / Edit form
 
-## Fuzzy search + typo tolerance
-
-```text
-$ decoreba dackar ps
-
-  docker › ps
-  1  List all containers including stopped   ◂ docker ps -a
-```
-
-Damerau–Levenshtein distance ≤2 catches typos at the bottom of results when
-exact fuzzy match returns nothing. Accents are normalized — `próximo` matches
-`proximo` and vice versa.
-
-## Recency ranking
-
-Score = fuzzy match + usage count + exponential time decay (half-life 48 h).
-Commands you reach for often stay near the top.
-
-## Add / Edit form
-
-```text
-$ decoreba add
-╭──────────────────────────────────────────────────────────────────────────────╮
-│  ▶ add command                                                                │
-│                                                                                │
-│  Context    docker                                                             │
-│  Title      Prune everything                                                   │
-│  Command    docker system prune -af --volumes                                  │
-│  Tags       cleanup, disk                                                      │
-│  Notes      Careful with --volumes                                             │
-│                                                                                │
-│  tab next   ⇧tab prev   ^s save   ^w workflow   esc cancel                    │
-╰──────────────────────────────────────────────────────────────────────────────╯
-```
+<img alt="decoreba add" src="docs/decoreba-add-form.png" width="600">
 
 Five fields: context, title, command, tags, notes. Context autocompletes from
-existing entries. Tags render as colored chips. `Ctrl+W` turns command into
-a multi-step workflow editor.
+existing entries. Tags render as colored chips. `Ctrl+W` turns the command
+into a multi-step workflow editor.
 
-`decoreba edit <id>` or `Ctrl+E` from the palette reopens the form with data
-pre-filled.
+`decoreba edit <id>` or `Ctrl+E` from the palette reopens the form pre-filled.
 
-## Workflows
+### Workflows
 
 Commands can have multiple steps. Each step is a title + command pair.
 
@@ -139,21 +134,21 @@ $ decoreba deploy
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │  ▶ Running workflow (step 2/3)                                                │
-│                                                                                │
 │  → 1  Build image          docker build -t web .                              │
 │  ✓ 2  Start container      docker run -d -p 80:80 web                         │
 │  → 3  Clean up             docker system prune -f                             │
-│                                                                                │
 │  enter next   ^x run all   esc abort                                          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-`Enter` steps forward. `Ctrl+X` runs all remaining. `Esc` aborts.
+`Enter` runs the next step. `Ctrl+X` runs all remaining (confirms first).
+`Esc` aborts. Failed steps show `✗`. Subprocess I/O routes through `/dev/tty`
+so interactive programs still work when piped.
 
-## Variables
+### Variables
 
-Add `{{placeholder}}` or `{{name:default}}` to any command. On copy or execute,
-decoreba prompts you for each value inline:
+Use `{{placeholder}}` or `{{name:default}}` in any command. On copy or
+execute, decoreba prompts for each value inline:
 
 ```text
 $ decoreba deploy
@@ -161,65 +156,80 @@ $ decoreba deploy
   Container name: [web]
 ```
 
-## Execute mode
+---
 
-`Shift+Enter` runs the selected command directly. With `--shell-output`,
-stdout replaces the clipboard, making the result pipeable:
+## Shell integration
 
-```bash
-decoreba docker ps --shell-output | grep "Up"
-```
+### Completions
 
-## Completions
+Generate tab completions for subcommands, contexts, and sync actions:
 
 ```bash
 eval "$(decoreba completion bash)"   # or zsh / fish
 ```
 
-## Desktop GUI (in development)
+### Ctrl+O widget
 
-Wails-based system tray overlay with a global hotkey (`Alt+Shift+Space`).
-Not included in npm or `go install` packages until ready. Build from source
-with `wails build` in `cmd/decoreba-desktop/`.
+Opens the palette pre-filled with whatever you typed. `Enter` inserts the
+command at the cursor. `Ctrl+X` executes (confirms first).
+
+```bash
+source <(decoreba shell bash)   # or zsh
+```
+
+### Init
+
+Installs both widget and completions into your shell rc file in one step.
+Creates a backup before modifying.
+
+```bash
+decoreba init              # interactive
+decoreba init --yes        # non-interactive
+```
 
 ---
 
-## Keybindings
+## Gist sync
 
-### Palette
+Sync your vault across machines via a private GitHub Gist.
 
-| Key | Action |
+```bash
+decoreba sync init          # create a new Gist and upload
+decoreba sync push          # upload local changes
+decoreba sync pull          # download remote changes
+decoreba sync status        # show ahead/behind/diverged/clean
+```
+
+Requires `DECOREBA_GIST_TOKEN` (classic PAT with `gist` scope). Pass
+`--encrypt` to encrypt with AES-256-GCM before upload. The key is derived
+from the token.
+
+---
+
+## MCP server
+
+Runs a [Model Context Protocol](https://modelcontextprotocol.io) server over
+stdin/stdout. Lets AI agents (Claude Desktop, Cline, etc.) interact with
+your command vault directly.
+
+```bash
+decoreba mcp
+```
+
+| Tool | Action |
 |---|---|
-| `↑` / `Ctrl+K` | Navigate up |
-| `↓` / `Ctrl+J` | Navigate down |
-| `Enter` | Copy selected |
-| `Shift+Enter` | Execute selected |
-| `1` – `9` | Direct select (empty search) |
-| `Ctrl+E` | Edit selected |
-| `Ctrl+S` | Toggle pin |
-| `Backspace` (empty) | Remove context chip |
-| `Esc` / `Ctrl+C` | Cancel |
+| `decoreba_search` | Fuzzy search across all contexts |
+| `decoreba_get` | Look up a command by ID |
+| `decoreba_list_contexts` | List all contexts with counts |
+| `decoreba_add` | Add a new command |
+| `decoreba_edit` | Update an existing command |
+| `decoreba_remove` | Delete by ID |
+| `decoreba_execute` | Run a command and return output |
+| `decoreba_stats` | Vault statistics |
 
-### Add / Edit form
-
-| Key | Action |
-|---|---|
-| `Tab` / `Shift+Tab` | Next / previous field |
-| `Ctrl+S` | Save |
-| `Ctrl+W` | Toggle workflow mode |
-| `Ctrl+N` | Add step (workflow) |
-| `Ctrl+D` | Delete step (workflow) |
-| `Tab` / `Right` | Accept autocomplete |
-| `Esc` × 2 (dirty) | Discard |
-| `Esc` / `Ctrl+C` | Cancel |
-
-### Workflow runner
-
-| Key | Action |
-|---|---|
-| `Enter` | Run next step |
-| `Ctrl+X` | Run all remaining |
-| `Esc` | Abort |
+Write and delete tools require `confirm: true`. Dangerous commands
+(`rm -rf /`, `> /dev/sda`, etc.) are blocked by a built-in denylist.
+Auto-backup runs before every modification.
 
 ---
 
@@ -233,7 +243,8 @@ Single JSON file. Atomic writes (save to `.tmp`, rename over target).
 | macOS | `~/Library/Application Support/decoreba/commands.json` |
 | Windows | `%AppData%\decoreba\commands.json` |
 
-Override: `$DECOREBA_CONFIG`.
+Override the directory with `$DECOREBA_CONFIG` (the filename is always
+`commands.json`).
 
 ---
 
@@ -241,22 +252,18 @@ Override: `$DECOREBA_CONFIG`.
 
 | Metric | Value |
 |---|---|
-| Binary | 3.7 MB (CLI, stripped) |
+| Binary | 6.2 MB (CLI, stripped with `-s -w`) |
 | Startup | ~2 ms |
-| RSS | ~3 MB |
-| Deps | zero (pure Go stdlib) |
+| RSS | ~7 MB |
+| Dependencies | zero (pure Go stdlib) |
 | Targets | linux amd64/arm64, macOS amd64/arm64, windows amd64 |
 
 ---
 
 ## Design
 
-- **Appear, don't replace.** Inline overlay, not alternate screen. Occupies
-  space below the prompt, leaves no trace on dismiss.
-- **Right answer before you finish typing.** Fuzzy + typo tolerance + recency +
-  pinning put the command on screen before the query is complete.
-- **Keyboard-first.** Every action has a shortcut. Hint line teaches them
-  progressively. No mouse.
-- **Context over categories.** Commands live under the tool they belong to.
-  Auto-detection from cwd means zero setup.
+- **Appear, don't replace.** Inline overlay, not alternate screen. The terminal is exactly as it was before.
+- **Right answer before you finish typing.** Fuzzy + typo tolerance + recency + pinning.
+- **Keyboard-first.** Every action has a shortcut. The hint line teaches them progressively. No mouse.
+- **Context over categories.** Commands live under the tool they belong to. Auto-detection from cwd.
 - **Accessible.** `NO_COLOR` and `--no-color` disable all ANSI escape codes.

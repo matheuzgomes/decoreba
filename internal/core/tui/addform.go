@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 const (
@@ -90,18 +89,18 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 		}
 	}
 
-	restore, err := term.MakeRaw()
+	restore, err := makeRaw()
 	if err != nil {
 		return nil, err
 	}
 	defer restore()
 
-	f.width, f.height = readTermSize()
+	f.width, f.height = readSize()
 	f.redraw()
 
 	buf := make([]byte, 64)
 	for {
-		n, err := term.ReadInput(buf)
+		n, err := readInput(buf)
 		if err != nil {
 			f.close()
 			return nil, err

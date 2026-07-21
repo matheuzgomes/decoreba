@@ -358,7 +358,7 @@ func TestRedrawAndCloseSequences(t *testing.T) {
 	p.setPool()
 	p.refilter()
 	p.w = &out
-	p.width, p.height = readTermSize()
+	p.width, p.height = readSize()
 
 	p.redraw()
 	frame1 := out.String()

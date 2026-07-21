@@ -40,7 +40,7 @@ func (o *overlay) init(w io.Writer) {
 // render returns (body, cursorLine, cursorCol).
 // cursorCol of 0 means no horizontal cursor positioning.
 func (o *overlay) refresh(render func(int, int) ([]byte, int, int)) {
-	w, h := readTermSize()
+	w, h := readSize()
 	o.width, o.height = w, h
 	body, cursorLine, cursorCol := render(w, h)
 	o.unsafeDraw(body, cursorLine, cursorCol)

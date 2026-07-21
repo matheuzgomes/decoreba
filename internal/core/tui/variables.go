@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 // HasVariables reports whether cmd contains at least one {{...}} placeholder.
@@ -26,7 +24,7 @@ func ResolveCommandInteractive(cmd string) (resolved string, cancelled bool, err
 		return cmd, false, nil
 	}
 
-	restore, err := term.MakeRaw()
+	restore, err := makeRaw()
 	if err != nil {
 		return "", false, err
 	}
@@ -85,7 +83,7 @@ func readVar(out *os.File, name, def string) (string, bool, error) {
 
 	readBuf := make([]byte, 8)
 	for {
-		n, err := term.ReadInput(readBuf)
+		n, err := readInput(readBuf)
 		if err != nil {
 			return "", false, err
 		}

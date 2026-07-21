@@ -7,7 +7,6 @@ import (
 	"os/exec"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 // RunWorkflow opens an inline progress UI and executes the workflow steps
@@ -17,7 +16,7 @@ func RunWorkflow(cmd *core.Command) error {
 		return nil
 	}
 
-	restore, err := term.MakeRaw()
+	restore, err := makeRaw()
 	if err != nil {
 		return err
 	}
@@ -43,7 +42,7 @@ func RunWorkflow(cmd *core.Command) error {
 
 	buf := make([]byte, 64)
 	for w.step < len(cmd.Steps) {
-		n, err := term.ReadInput(buf)
+		n, err := readInput(buf)
 		if err != nil {
 			w.overlay.close()
 			return err

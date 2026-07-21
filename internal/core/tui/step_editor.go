@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 const (
@@ -34,7 +33,7 @@ func EditSteps(steps []core.WorkflowStep, out io.Writer) ([]core.WorkflowStep, b
 
 	buf := make([]byte, 64)
 	for {
-		n, err := term.ReadInput(buf)
+		n, err := readInput(buf)
 		if err != nil {
 			e.close()
 			return nil, false, err

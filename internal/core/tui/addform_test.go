@@ -22,6 +22,128 @@ func newTestAddForm() *addForm {
 	return f
 }
 
+func TestCollectContexts(t *testing.T) {
+	s := &core.Store{Commands: []core.Command{
+		{ID: "1", Context: "git", Title: "stash", Command: "git stash"},
+		{ID: "2", Context: "docker", Title: "ps", Command: "docker ps"},
+		{ID: "3", Context: "git", Title: "reset", Command: "git reset"},
+	}}
+	got := collectContexts(s)
+	if len(got) != 2 {
+		t.Fatalf("got %d contexts, want 2", len(got))
+	}
+}
+
+func TestAddFormClearConfirm(t *testing.T) {
+	f := newTestAddForm()
+	f.confirmExit = true
+	f.errMsg = "error"
+	f.clearConfirm()
+	if f.confirmExit {
+		t.Fatal("confirmExit should be false")
+	}
+	if f.errMsg != "" {
+		t.Fatalf("errMsg should be empty, got %q", f.errMsg)
+	}
+}
+
+func TestAddFormClearErrOnEdit(t *testing.T) {
+	f := newTestAddForm()
+	f.focus = 0
+	f.errField = 0
+	f.errMsg = "error"
+	f.errFlash = 5
+	f.clearErrOnEdit()
+	if f.errField != -1 {
+		t.Fatal("errField should be -1 after clear")
+	}
+	if f.errMsg != "" {
+		t.Fatalf("errMsg should be empty, got %q", f.errMsg)
+	}
+}
+
+func TestAddFormIsDirty(t *testing.T) {
+	t.Run("no edits, not editing", func(t *testing.T) {
+		f := newTestAddForm()
+		if f.isDirty() {
+			t.Fatal("should not be dirty with no edits")
+		}
+	})
+	t.Run("has content when not editing", func(t *testing.T) {
+		f := newTestAddForm()
+		f.fields[fieldContext] = []rune("git")
+		if !f.isDirty() {
+			t.Fatal("should be dirty with content")
+		}
+	})
+	t.Run("editing with changes", func(t *testing.T) {
+		f := newTestAddForm()
+		f.editing = true
+		f.existing = &core.Command{Context: "git", Title: "stash", Command: "git stash", Tags: []string{"save"}, Notes: "my notes"}
+		f.fields[fieldTitle] = []rune("stash changed")
+		if !f.isDirty() {
+			t.Fatal("should be dirty when title changed")
+		}
+	})
+	t.Run("editing without changes", func(t *testing.T) {
+		f := newTestAddForm()
+		f.editing = true
+		f.existing = &core.Command{Context: "git", Title: "stash", Command: "git stash", Tags: []string{"save"}, Notes: "my notes"}
+		f.fields[fieldContext] = []rune("git")
+		f.fields[fieldTitle] = []rune("stash")
+		f.fields[fieldCommand] = []rune("git stash")
+		f.fields[fieldTags] = []rune("save")
+		f.fields[fieldNotes] = []rune("my notes")
+		if f.isDirty() {
+			t.Fatal("should not be dirty when fields match existing")
+		}
+	})
+}
+
+func TestAddFormMoveFocus(t *testing.T) {
+	f := newTestAddForm()
+	f.fields[fieldContext] = []rune("ctx")
+	f.fields[fieldTitle] = []rune("title")
+
+	f.moveFocus(1)
+	if f.focus != 1 {
+		t.Fatalf("focus should be 1, got %d", f.focus)
+	}
+
+	f.moveFocus(-1)
+	if f.focus != 0 {
+		t.Fatalf("focus should be 0, got %d", f.focus)
+	}
+}
+
+func TestAddFormContextSuggestion(t *testing.T) {
+	t.Run("wrong focus returns empty", func(t *testing.T) {
+		f := newTestAddForm()
+		f.focus = 1
+		if got := f.contextSuggestion(); got != "" {
+			t.Fatalf("got %q, want empty", got)
+		}
+	})
+	t.Run("partial match returns suffix", func(t *testing.T) {
+		f := newTestAddForm()
+		f.focus = 0
+		f.fields[fieldContext] = []rune("doc")
+		f.cursor = 3
+		if got := f.contextSuggestion(); got != "ker" {
+			t.Fatalf("got %q, want ker", got)
+		}
+	})
+	t.Run("no match returns empty", func(t *testing.T) {
+		f := newTestAddForm()
+		f.focus = 0
+		f.fields[fieldContext] = []rune("xyz")
+		f.cursor = 3
+		if got := f.contextSuggestion(); got != "" {
+			t.Fatalf("got %q, want empty", got)
+		}
+	})
+}
+
 func TestAddFormRenderLayout(t *testing.T) {
 	f := newTestAddForm()
 	if got := f.frameLines(); got != 9 {

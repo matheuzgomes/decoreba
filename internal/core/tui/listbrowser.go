@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	"github.com/matheuzgomes/decoreba/internal/core"
-	"github.com/matheuzgomes/decoreba/internal/core/term"
 )
 
 type contextEntry struct {
@@ -61,18 +60,18 @@ func RunListBrowser(s *core.Store, onPin ...func(*core.Command)) (*core.Command,
 		}
 	}
 
-	restore, err := term.MakeRaw()
+	restore, err := makeRaw()
 	if err != nil {
 		return nil, ActionCopy, err
 	}
 	defer restore()
 
-	b.width, b.height = readTermSize()
+	b.width, b.height = readSize()
 	b.redraw()
 
 	buf := make([]byte, 64)
 	for {
-		n, err := term.ReadInput(buf)
+		n, err := readInput(buf)
 		if err != nil {
 			b.close()
 			return nil, ActionCopy, err

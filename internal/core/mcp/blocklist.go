@@ -21,8 +21,8 @@ var blocklist = []BlocklistEntry{
 	{`format`, "format (disk format)", 2},
 	{`> /dev/sd`, "write to block device", 2},
 	{`:(){ :|:& };:`, "fork bomb", 2},
-	{`chmod -R 0`, "chmod -R 0 (lock all files)", 1},
-	{`chown -R`, "chown -R (recursive ownership)", 1},
+	{`chmod -r 0`, "chmod -R 0 (lock all files)", 1},
+	{`chown -r`, "chown -R (recursive ownership)", 1},
 	{`mv /`, "mv / (move root)", 2},
 }
 
