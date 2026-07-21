@@ -108,7 +108,7 @@ func handleInitialize(req JSONRPCRequest) {
 		},
 		"serverInfo": map[string]string{
 			"name":    "decoreba",
-			"version": "0.2.0",
+			"version": "0.3.0",
 		},
 	}
 	writeResult(req.ID, result)
