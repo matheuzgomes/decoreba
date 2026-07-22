@@ -36,10 +36,30 @@ that would make it more useful, open a PR or an issue.
 
 ## Install
 
-The simplest path is npm. I can add brew too later on:
+Choose one path:
 
 ```bash
+# Homebrew (macOS and Linux)
+brew tap matheuzgomes/decoreba
+
+brew trust matheuzgomes/decoreba
+
+brew install decoreba
+```
+
+Trust is required by Homebrew on Linux. To skip the
+trust prompt entirely:
+
+```bash
+HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew install matheuzgomes/decoreba/decoreba
+```
+
+```bash
+# npm (all platforms)
 npm install -g decoreba
+
+# go (from source, requires Go 1.25+)
+go install github.com/matheuzgomes/decoreba/cmd/decoreba@latest
 ```
 
 Check that the installation worked:
@@ -48,16 +68,9 @@ Check that the installation worked:
 decoreba version
 ```
 
-Or install from source with Go:
-
-```bash
-go install github.com/matheuzgomes/decoreba/cmd/decoreba@latest
-```
-
-This path requires Go 1.25 or newer.
-
 The npm package provides releases for Linux (amd64, arm64), macOS (amd64,
-arm64), and Windows (amd64).
+arm64), and Windows (amd64). Homebrew supports Linux and macOS (Intel and
+Apple Silicon).
 
 ## Quick start
 

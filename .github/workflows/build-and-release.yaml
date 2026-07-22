@@ -140,3 +140,22 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-homebrew:
+    needs: release
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Dispatch tap update
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          curl -sSf -X POST \
+            -H "Authorization: token $HOMEBREW_TAP_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/matheuzgomes/homebrew-decoreba/dispatches" \
+            -d "{\"event_type\":\"decoreba-release\",\"client_payload\":{\"tag\":\"$TAG\",\"version\":\"$VERSION\",\"repository\":\"matheuzgomes/decoreba\"}}"
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
