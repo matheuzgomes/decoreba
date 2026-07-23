@@ -46,6 +46,14 @@ Save a command you want to remember:
 decoreba add
 ```
 
+To save the most recent command available in your shell history without retyping it:
+
+```bash
+decoreba add --last
+```
+
+This is best effort: shells may not have persisted the current session's last command to the history file yet. The form still asks for your context and title before saving.
+
 The form asks for a context, title, command, tags, and notes. For example:
 
 ```text

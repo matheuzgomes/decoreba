@@ -19,6 +19,9 @@ _decoreba_completion() {
     fi
 
     case "${words[1]}" in
+        add)
+            COMPREPLY=($(compgen -W "--last" -- "$cur"))
+            ;;
         list|ls)
             COMPREPLY=($(compgen -W "$(decoreba list 2>/dev/null | sed -n 's/^  - \([^ ]*\).*/\1/p')" -- "$cur"))
             ;;
@@ -66,6 +69,9 @@ _decoreba() {
     case "$state" in
         rest)
             case "${words[2]}" in
+                add)
+                    _arguments '*: :(--last)'
+                    ;;
                 list|ls)
                     local -a contexts
                     contexts=(${(f)"$(decoreba list 2>/dev/null | sed -n 's/^  - \([^ ]*\).*/\1/p')"})
@@ -106,6 +112,7 @@ complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove e
 complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats init shell sync mcp export import version help completion' -a 'version' -d 'Show version'
 complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats init shell sync mcp export import version help completion' -a 'help' -d 'Show help'
 complete -c decoreba -n 'not __fish_seen_subcommand_from add list ls rm remove edit stats init shell sync mcp export import version help completion' -a 'completion' -d 'Generate shell completion'
+complete -c decoreba -n '__fish_seen_subcommand_from add; and not __fish_seen_subcommand_from --last' -l last -d 'Use the most recent persisted shell command'
 complete -c decoreba -n '__fish_seen_subcommand_from list ls; and test (count (commandline -opc)) -eq 2' -a '(decoreba list 2>/dev/null | string match -r "  - \w+" | string replace -r "  - " "")'
 `
 

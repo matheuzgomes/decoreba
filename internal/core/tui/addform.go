@@ -16,10 +16,10 @@ const (
 	fieldNotes   = 4
 	fieldCount   = 5
 
-	addFormHint  = "tab next  ⇧tab previous  ^s save  ^w workflow  esc cancel"
-	newCmdHeader = "+ new command"
+	addFormHint   = "tab next  ⇧tab previous  ^s save  ^w workflow  esc cancel"
+	newCmdHeader  = "+ new command"
 	editCmdHeader = "edit command"
-	labelPad     = 9
+	labelPad      = 9
 )
 
 var fieldLabels = [fieldCount]string{
@@ -50,16 +50,21 @@ type addForm struct {
 // RunAddForm opens an interactive inline command-creation form. Returns the
 // new command or nil when the user cancels.
 func RunAddForm(store *core.Store) (*core.Command, error) {
-	return runForm(store, nil)
+	return runForm(store, nil, "")
+}
+
+// RunAddFormWithCommand opens a new command form with the command field pre-filled.
+func RunAddFormWithCommand(store *core.Store, command string) (*core.Command, error) {
+	return runForm(store, nil, command)
 }
 
 // RunEditForm opens the same interactive form pre-filled with an existing
 // command. Returns the updated command (with the same ID) or nil on cancel.
 func RunEditForm(store *core.Store, existing *core.Command) (*core.Command, error) {
-	return runForm(store, existing)
+	return runForm(store, existing, "")
 }
 
-func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
+func runForm(store *core.Store, existing *core.Command, initialCommand string) (*core.Command, error) {
 	f := &addForm{
 		store:    store,
 		errField: -1,
@@ -74,6 +79,9 @@ func runForm(store *core.Store, existing *core.Command) (*core.Command, error) {
 			f.w = ff
 			defer ff.Close()
 		}
+	}
+	if initialCommand != "" {
+		f.fields[fieldCommand] = []rune(initialCommand)
 	}
 	if existing != nil {
 		f.fields[fieldContext] = []rune(existing.Context)
@@ -147,11 +155,11 @@ func (f *addForm) apply(events []keyEvent) (done bool, cmd *core.Command) {
 		case keyWorkflow:
 			f.isWorkflow = !f.isWorkflow
 			f.clearErrOnEdit()
-	case keyEnter:
-		if f.focus == fieldCommand && f.isWorkflow {
-			f.close()
-			steps, cancelled, err := EditSteps(f.workflowSteps, nil)
-			if err != nil {
+		case keyEnter:
+			if f.focus == fieldCommand && f.isWorkflow {
+				f.close()
+				steps, cancelled, err := EditSteps(f.workflowSteps, nil)
+				if err != nil {
 					return true, nil
 				}
 				if !cancelled {
@@ -371,5 +379,3 @@ func (f *addForm) redraw() {
 func (f *addForm) close() {
 	f.overlay.close()
 }
-
-

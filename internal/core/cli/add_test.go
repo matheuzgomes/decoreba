@@ -48,6 +48,24 @@ func TestCmdAddFallbackFull(t *testing.T) {
 	}
 }
 
+func TestCmdAddFallbackFromHistory(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("DECOREBA_CONFIG", filepath.Join(tmp, "commands.json"))
+
+	s := &core.Store{Version: 1}
+	if err := store.Save(s); err != nil {
+		t.Fatal(err)
+	}
+
+	restore := mockStdin(t, "kubectl\nList pods\ntags\nnotes\n")
+	defer restore()
+	cmdAddFallback(s, "kubectl get pods --all-namespaces")
+
+	if len(s.Commands) != 1 || s.Commands[0].Command != "kubectl get pods --all-namespaces" {
+		t.Fatalf("unexpected commands: %+v", s.Commands)
+	}
+}
+
 func TestCmdAddFallbackMissingRequired(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("DECOREBA_CONFIG", filepath.Join(tmp, "commands.json"))

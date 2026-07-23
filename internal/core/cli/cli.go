@@ -51,7 +51,7 @@ func Run() {
 
 	switch args[0] {
 	case "add":
-		cmdAdd(s)
+		cmdAdd(s, args[1:]...)
 	case "list", "ls":
 		cmdList(s, args[1:], shellOutput)
 	case "rm", "remove":

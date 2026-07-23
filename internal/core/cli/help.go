@@ -10,6 +10,7 @@ Usage:
   decoreba <context>            Interactive search within a context (e.g. tmux)
   decoreba <context> <query>    Direct search (e.g. decoreba git undo)
   decoreba add                  Add a new command (interactive mode)
+  decoreba add --last           Add the most recent persisted shell command
   decoreba list                 List contexts and command count
   decoreba list <context>       List commands saved in a context
   decoreba rm <id>              Remove a command by id (or id prefix)
