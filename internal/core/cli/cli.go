@@ -8,7 +8,7 @@ import (
 	"github.com/matheuzgomes/decoreba/internal/core/tui"
 )
 
-const version string = "0.3.0"
+const version string = "0.4.0"
 
 func Run() {
 	args := os.Args[1:]
