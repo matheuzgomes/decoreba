@@ -125,7 +125,7 @@ decoreba edit <id>           # edit by id or id prefix
 decoreba rm <id>             # remove by id or id prefix
 decoreba stats               # show vault statistics
 decoreba export              # export commands to stdout
-decoreba import [file]       # import from stdin or a file
+decoreba import [file]       # import from stdin, a file, pet, or navi
 decoreba help                # show the full command list
 ```
 
@@ -153,6 +153,17 @@ decoreba sync status
 Sync needs `DECOREBA_GIST_TOKEN`, a classic GitHub token with the `gist` scope. Use `--encrypt` to encrypt the uploaded vault with AES-256-GCM.
 
 Sync is an optional transport. It is not required for the local workflow.
+
+## Import from pet or navi
+
+If you used pet or navi before, you can bring those commands into decoreba:
+
+```bash
+decoreba import pet --path ~/.config/pet/snippet.toml
+decoreba import navi --path ~/.config/navi/cheats/
+```
+
+Commands that already exist in your vault are skipped. Add `--dry-run` to see what would be imported without changing anything.
 
 ## Optional MCP server
 

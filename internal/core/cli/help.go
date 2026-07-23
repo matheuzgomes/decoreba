@@ -23,6 +23,8 @@ Usage:
   decoreba sync <sub>           Sync commands via Gist (init|status|push|pull)
   decoreba export [--full]      Export commands to stdout (or file)
   decoreba import [file]        Import commands from stdin (or file)
+  decoreba import pet --path    Import commands from pet (use --dry-run to preview)
+  decoreba import navi --path   Import commands from navi (use --dry-run to preview)
   decoreba version              Show version
   decoreba help                 Show this help
 
