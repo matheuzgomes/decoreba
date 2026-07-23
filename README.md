@@ -52,7 +52,7 @@ To save the most recent command available in your shell history without retyping
 decoreba add --last
 ```
 
-This is best effort: shells may not have persisted the current session's last command to the history file yet. The form still asks for your context and title before saving.
+Decoreba reads your shell history and skips its own invocation, so you can run `add --last` right after the command you want to save. The form still asks for your context and title before saving.
 
 The form asks for a context, title, command, tags, and notes. For example:
 
@@ -129,6 +129,8 @@ decoreba                    # search all contexts
 decoreba git undo            # search within git
 decoreba list                # list contexts and command counts
 decoreba list docker         # list commands in docker
+decoreba add                 # add a command (interactive)
+decoreba add --last          # add the last shell command you ran
 decoreba edit <id>           # edit by id or id prefix
 decoreba rm <id>             # remove by id or id prefix
 decoreba stats               # show vault statistics
